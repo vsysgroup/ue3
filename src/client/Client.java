@@ -51,7 +51,7 @@ public class Client {
 //		if(args.length != 2) {
 //			throw new WrongParameterCountException();
 //		} else {
-		Boolean test = false;
+		boolean test = false;
 			this.serverHost = args[0];
 			this.serverTCPPort = Integer.parseInt(args[1]);
 			if(args.length >= 4) {
@@ -167,7 +167,9 @@ public class Client {
 				}
 			}
 		}
-		exitClient();
+		if(!test) {
+			exitClient();
+		}
 	}
 
 

@@ -29,6 +29,10 @@ public class Client {
 	private DatagramSocket datagramSocket = null;
 //	private ClientUDPListenerThread clientUDPListenerThread = null;
 	private ClientTCPListenerThread clientTCPListenerThread = null;
+	private int clientPort;
+	
+	private String pathToPublicServerKey;
+	private String pathToKeyDirectory;
 
 	public static void main(String[] args) {
 
@@ -47,18 +51,17 @@ public class Client {
 	 * @throws WrongParameterCountException
 	 */
 	public Client(String[] args) throws WrongParameterCountException {
-		//check if parameters are alright
-//		if(args.length != 2) {
-//			throw new WrongParameterCountException();
-//		} else {
 		boolean test = false;
+		//check if parameters are alright
+		if(args.length != 5) {
+			throw new WrongParameterCountException();
+		} else {
 			this.serverHost = args[0];
 			this.serverTCPPort = Integer.parseInt(args[1]);
-			if(args.length >= 4) {
-				test = true;
-			}
-//			this.udpPort = Integer.parseInt(args[2]);
-//		}
+			this.clientPort = Integer.parseInt(args[2]);
+			this.pathToPublicServerKey = args[3];
+			this.pathToKeyDirectory = args[4];
+		}
 
 		clientStatus = true;
 
@@ -67,19 +70,6 @@ public class Client {
 		establishTCPConnection();
 		clientTCPListenerThread = new ClientTCPListenerThread(tcpCommunication,this);
 		clientTCPListenerThread.start();
-
-		//!!LAB2: NO UDP!!
-//		try {
-//			datagramSocket = new DatagramSocket(this.udpPort);
-//		} catch (SocketException e) {
-//			System.out.println("Could not bind to UDP port! The port may be in use." + " Port: " + udpPort);
-//			exitClient();
-//		}
-//		//		Start the listener threads
-//		new ClientTCPListenerThread(tcpCommunication, this).start();
-//		clientUDPListenerThread = new ClientUDPListenerThread(datagramSocket, this);
-//		clientUDPListenerThread.start();
-
 
 		//loop checking for input
 		while(clientStatus && !test) {

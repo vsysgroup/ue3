@@ -59,6 +59,9 @@ public class Server {
 	private static AnalyticsServerInterface analyticsHandler = null;
 	private static IBillingServer loginHandler = null;
 	private static IBillingServerSecure billingHandler = null;
+	
+	private String pathToKeyDirectory;
+	private String pathToServerKey;
 
 	public static void main(String[] args) {
 		
@@ -80,10 +83,14 @@ public class Server {
 	 * @throws WrongParameterCountException
 	 */
 	public Server(String[] args) throws WrongParameterCountException{
-		if(args.length != 1) {
+		if(args.length != 5) {
 			throw new WrongParameterCountException();
 		} else {
 			this.tcpPort = Integer.parseInt(args[0]);
+			this.bindingNameAnalytics = args[1];
+			this.bindingNameBilling = args[2];
+			this.pathToServerKey = args[3];
+			this.pathToKeyDirectory = args[4];
 		}
 
 		System.out.println("Starting Server.");

@@ -54,7 +54,9 @@ public class IntegrityManager {
 	 * @throws NoSuchAlgorithmException 
 	 * @throws InvalidKeyException 
 	 */
-	public byte[] createHashMAC(Key secretKey, byte message) throws NoSuchAlgorithmException, InvalidKeyException {
+	public byte[] createHashMAC(Key secretKey, String msg) throws NoSuchAlgorithmException, InvalidKeyException {
+		
+		byte[] message = msg.getBytes();
 		
 		Mac hMac = Mac.getInstance("HmacSHA256"); 
 		hMac.init(secretKey);

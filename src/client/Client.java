@@ -37,6 +37,7 @@ public class Client {
 	private String pathToPublicServerKey;
 	private String pathToKeyDirectory;
 	
+	private IntegrityManager integrityManager;
 	private Key clientSecretKey;
 
 	public static void main(String[] args) {
@@ -68,10 +69,9 @@ public class Client {
 			this.pathToKeyDirectory = args[4];
 			
 			//load IntegrityManger and client's secret key
-			IntegrityManager integrityManager = new IntegrityManager(pathToKeyDirectory);
+			integrityManager = new IntegrityManager(pathToKeyDirectory);
 			try {
 				clientSecretKey = integrityManager.getSecretKey("alice");
-				System.out.println(clientSecretKey.toString());
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

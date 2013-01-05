@@ -1,6 +1,7 @@
 package server;
 
 import java.net.InetAddress;
+import java.security.Key;
 import java.util.ArrayList;
 
 /**
@@ -15,6 +16,7 @@ public class User {
 	private InetAddress inetAddress = null;
 	private int port;
 	private ArrayList<String> savedMessages = new ArrayList<String>();
+	private Key secretKey;
 	
 	public User(String username, InetAddress inetAddress, int port) {
 		this.username = username;
@@ -69,6 +71,15 @@ public class User {
 	public void clearMessages() {
 		savedMessages.clear();
 		
+	}
+
+	public void setKey(Key secretKey) {
+		this.secretKey = secretKey;
+		
+	}
+	
+	public Key getKey() {
+		return secretKey;
 	}
 
 }

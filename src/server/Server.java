@@ -1,5 +1,7 @@
 package server;
 
+import integrity.IntegrityManager;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -62,6 +64,8 @@ public class Server {
 	
 	private String pathToKeyDirectory;
 	private String pathToServerKey;
+	
+	private IntegrityManager integrityManager;
 
 	public static void main(String[] args) {
 		
@@ -91,6 +95,9 @@ public class Server {
 			this.bindingNameBilling = args[2];
 			this.pathToServerKey = args[3];
 			this.pathToKeyDirectory = args[4];
+			
+			//load integrityManager
+			integrityManager = new IntegrityManager(pathToKeyDirectory);
 		}
 
 		System.out.println("Starting Server.");
@@ -151,6 +158,15 @@ public class Server {
 			if(!userKnown(username)){
 				User newUser = new User(username, inetAddress, port);
 				users.add(newUser);
+				
+				//add user's key to newUser
+				try {
+					newUser.setKey(integrityManager.getSecretKey(username));
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				
 				newUser.logIn();
 
 				if(analyticsHandler != null) {

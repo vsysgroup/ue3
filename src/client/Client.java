@@ -1,9 +1,12 @@
 package client;
 
+import integrity.IntegrityManager;
+
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.Key;
 import java.util.Scanner;
 
 import communication.TCPCommunication;
@@ -33,6 +36,8 @@ public class Client {
 	
 	private String pathToPublicServerKey;
 	private String pathToKeyDirectory;
+	
+	private Key clientSecretKey;
 
 	public static void main(String[] args) {
 
@@ -61,6 +66,17 @@ public class Client {
 			this.clientPort = Integer.parseInt(args[2]);
 			this.pathToPublicServerKey = args[3];
 			this.pathToKeyDirectory = args[4];
+			
+			//load IntegrityManger and client's secret key
+			IntegrityManager integrityManager = new IntegrityManager(pathToKeyDirectory);
+			try {
+				clientSecretKey = integrityManager.getSecretKey("alice");
+				System.out.println(clientSecretKey.toString());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 		}
 
 		clientStatus = true;

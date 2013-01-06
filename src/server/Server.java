@@ -304,19 +304,14 @@ public class Server {
 			String list = buildList();
 			String returnMessage = "list " + list;
 			try {
-				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);
-				
-				System.out.println(hMAC);
-				
+				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
 				byte[] encodedHMAC = Base64.encode(hMAC);  
 				String append = new String(encodedHMAC);
 				
 				returnMessage += " " + append;
 			} catch (InvalidKeyException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}	
 			responseTCPCommunication.send(returnMessage);

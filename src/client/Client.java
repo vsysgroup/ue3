@@ -43,6 +43,8 @@ public class Client {
 	
 	private IntegrityManager integrityManager;
 	private Key clientSecretKey;
+	
+	private Boolean secondAttemptRequested = false;
 
 	public static void main(String[] args) {
 
@@ -279,7 +281,17 @@ public class Client {
 						System.out.println(buildList(newSplitResponse));
 					}
 					else {
-						//TODO: send request for repetition of message
+						String [] newSplitResponse = new String[splitResponse.length-1];
+						for(int i = 0; i < splitResponse.length-1; i++) {
+							newSplitResponse[i] = splitResponse[i];
+						}
+						System.out.println(buildList(newSplitResponse));
+						if(!secondAttemptRequested) {
+							list();
+							secondAttemptRequested = true;
+						} else {
+							secondAttemptRequested = false;
+						}
 					}
 					
 				} catch (InvalidKeyException e) {

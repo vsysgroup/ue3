@@ -10,6 +10,9 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -20,6 +23,7 @@ import java.util.Scanner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 
 import registry.RegistryReader;
 import analyticsServer.AnalyticsServerInterface;
@@ -276,12 +280,46 @@ public class Server {
 		 * sends the following responses:
 		 * list <list>
 		 */
-		if(input[0].equals("!list")) {
+		if(input[0].equals("!list") && input.length == 1) {
 
 			String list = buildList();
 //			new UDPNotificationThread(returnAddress, port, "list" + " " + list).start();
 			responseTCPCommunication.send("list " + list);
 			
+		}
+		/**
+		 * creates a list and sends it to the user. The user has to be logged in to receive this version
+		 * of the message and will receive a hashed MAC at the end.
+		 * sends the following responses:
+		 * list <list> <hMAC>
+		 */
+		if(input[0].equals("!list") && input.length == 2) {
+			
+			//create a hashed MAC for the specific user
+			String username = input[1];
+			User user = findUser(username);
+			Key key = user.getKey();
+		
+			
+			String list = buildList();
+			String returnMessage = "list " + list;
+			try {
+				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);
+				
+				System.out.println(hMAC);
+				
+				byte[] encodedHMAC = Base64.encode(hMAC);  
+				String append = new String(encodedHMAC);
+				
+				returnMessage += " " + append;
+			} catch (InvalidKeyException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+			responseTCPCommunication.send(returnMessage);
 		}
 
 		/**

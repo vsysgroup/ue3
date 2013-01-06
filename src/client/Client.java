@@ -6,8 +6,12 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.Scanner;
+
+import org.bouncycastle.util.encoders.Base64;
 
 import communication.TCPCommunication;
 
@@ -73,7 +77,6 @@ public class Client {
 			try {
 				clientSecretKey = integrityManager.getSecretKey("alice");
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
@@ -251,7 +254,41 @@ public class Client {
 		 * list <list as String>
 		 */
 		else if(splitResponse[0].equals("list")) {
-			System.out.println(buildList(splitResponse));
+			if(!loggedIn) {
+				System.out.println(buildList(splitResponse));
+			}
+			else {
+				String removeFromMessage = " " + splitResponse[splitResponse.length-1];
+				String messageWithoutMAC = message.replaceAll(removeFromMessage, ""); 
+				
+				try {
+					
+					// create an own hMAC
+					byte[] ownMAC = integrityManager.createHashMAC(clientSecretKey, messageWithoutMAC);
+					// read the hMAC from the message
+					byte[] decodedHMAC = Base64.decode(splitResponse[splitResponse.length-1]);  
+					
+					//compare the two hMACs
+					boolean match = integrityManager.verifyHashMAC(ownMAC, decodedHMAC);
+					
+					if(match) {
+						String [] newSplitResponse = new String[splitResponse.length-1];
+						for(int i = 0; i < splitResponse.length-1; i++) {
+							newSplitResponse[i] = splitResponse[i];
+						}
+						System.out.println(buildList(newSplitResponse));
+					}
+					else {
+						//TODO: send request for repetition of message
+					}
+					
+				} catch (InvalidKeyException e) {
+					e.printStackTrace();
+				} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+				}
+			}
+			
 		}
 
 		/**

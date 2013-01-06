@@ -6,16 +6,17 @@ import java.io.*;
 /**
  * This class enables basic communication via TCP.
  * @author Philipp Pfeiffer 0809357
+ * @author Barbara Schwankl 0852176
  *
  */
-public class TCPCommunication {
+public class TCPChannel implements Channel {
 
 	private BufferedReader in = null;
 	private PrintWriter out = null;
 	@SuppressWarnings("unused")
 	private Socket socket = null;
 	
-	public TCPCommunication(Socket socket) throws IOException{
+	public TCPChannel(Socket socket) throws IOException{
 		this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		this.out = new PrintWriter(socket.getOutputStream(), true);
 		this.socket = socket;
@@ -26,9 +27,9 @@ public class TCPCommunication {
 	 * @param message
 	 * @return boolean
 	 */
-	public boolean send(String message) {
+	public void send(String message) {
 		out.println(message);
-		return true;
+//		return true;
 	}
 	
 	/**

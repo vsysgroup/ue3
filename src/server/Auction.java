@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
-import communication.TCPCommunication;
+import communication.TCPChannel;
 
 /**
  * Represents an auction
@@ -65,7 +65,7 @@ public class Auction {
 		return this.ID;
 	}
 	
-	synchronized public void newBid(User bidder, double amount, TCPCommunication tcpCommunication) {
+	synchronized public void newBid(User bidder, double amount, TCPChannel tcpCommunication) {
 		if(!bidders.contains(bidder)) {
 			bidders.add(bidder);
 			if(amount > highestBid) {

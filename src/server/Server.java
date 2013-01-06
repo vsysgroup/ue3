@@ -27,7 +27,7 @@ import analyticsServer.UserEvent;
 import billingServer.IBillingServer;
 import billingServer.IBillingServerSecure;
 
-import communication.TCPCommunication;
+import communication.TCPChannel;
 
 import exception.WrongParameterCountException;
 
@@ -123,9 +123,9 @@ public class Server {
 		InetAddress inetAddress = socket.getInetAddress();
 
 		String[] input = message.split(" ");
-		TCPCommunication responseTCPCommunication = null;
+		TCPChannel responseTCPCommunication = null;
 		try {
-			 responseTCPCommunication = new TCPCommunication(socket);
+			 responseTCPCommunication = new TCPChannel(socket);
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
@@ -356,7 +356,7 @@ public class Server {
 	 * @param amountHighestBid
 	 * @param description
 	 */
-	public void bidUnsuccessful(User bidder, double amountBid, double amountHighestBid, String description, TCPCommunication responseTCPCommunication) {
+	public void bidUnsuccessful(User bidder, double amountBid, double amountHighestBid, String description, TCPChannel responseTCPCommunication) {
 		InetAddress inetAddress = bidder.getInetAddress();
 		int port = bidder.getPort();
 //		new UDPNotificationThread(inetAddress, port, "bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description).start();
@@ -481,7 +481,7 @@ public class Server {
 	 * @param amount
 	 * @param description
 	 */
-	public void bidSuccessful(User bidder, double amount, String description, int auctionID, TCPCommunication tcpCommunication) {
+	public void bidSuccessful(User bidder, double amount, String description, int auctionID, TCPChannel tcpCommunication) {
 		InetAddress inetAddress = bidder.getInetAddress();
 		int port = bidder.getPort();
 		if(analyticsHandler != null) {
@@ -501,7 +501,7 @@ public class Server {
 	 * @param bidder
 	 * @param description
 	 */
-	public void userOverbid(User bidder, double amount, String description, int auctionID, TCPCommunication tcpCommunication) {
+	public void userOverbid(User bidder, double amount, String description, int auctionID, TCPChannel tcpCommunication) {
 		InetAddress inetAddress = bidder.getInetAddress();
 		int port = bidder.getPort();
 		if(analyticsHandler != null) {

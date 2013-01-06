@@ -3,7 +3,7 @@ package server;
 import java.io.IOException;
 import java.net.Socket;
 
-import communication.TCPCommunication;
+import communication.TCPChannel;
 
 /**
  * This thread is established once contact with a Client has been made. It handles communications
@@ -15,7 +15,7 @@ public class ServerTCPCommunicationThread extends Thread {
 	
 	private Socket clientSocket = null;
 	private Server server;
-	private TCPCommunication tcpCommunication = null;
+	private TCPChannel tcpCommunication = null;
 	
 	public ServerTCPCommunicationThread(Socket socket, Server server) {
 		this.clientSocket = socket;
@@ -25,7 +25,7 @@ public class ServerTCPCommunicationThread extends Thread {
 	
 	public void run() {
 		try {
-			this.tcpCommunication = new TCPCommunication(clientSocket);
+			this.tcpCommunication = new TCPChannel(clientSocket);
 		} catch(IOException e) {
 			exit();
 			return;

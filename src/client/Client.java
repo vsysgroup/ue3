@@ -4,15 +4,24 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.SecureRandom;
 import java.util.Scanner;
 
-import communication.TCPCommunication;
+import security.KeyReader;
+import security.MyBase64;
+
+
+import communication.Base64Channel;
+import communication.Channel;
+import communication.RSAChannel;
+import communication.TCPChannel;
 
 import exception.WrongParameterCountException;
 
 /**
  * Represents a Client
  * @author Philipp Pfeiffer 0809357
+ * @author Barbara Schwankl 0852176
  * 
  */
 public class Client {
@@ -24,7 +33,7 @@ public class Client {
 	private Boolean clientStatus = false;
 	private Boolean loggedIn = false;
 	private Scanner in = new Scanner(System.in);
-	private TCPCommunication tcpCommunication = null;
+	private Channel channel = null;
 	private String username = "";
 	private DatagramSocket datagramSocket = null;
 //	private ClientUDPListenerThread clientUDPListenerThread = null;
@@ -65,7 +74,7 @@ public class Client {
 		System.out.println("Starting Client.");
 		
 		establishTCPConnection();
-		clientTCPListenerThread = new ClientTCPListenerThread(tcpCommunication,this);
+		clientTCPListenerThread = new ClientTCPListenerThread(channel,this);
 		clientTCPListenerThread.start();
 
 		//!!LAB2: NO UDP!!
@@ -175,14 +184,31 @@ public class Client {
 
 
 	private void listWhileNotLoggedIn() {
-		tcpCommunication.send("!list");
+		channel.send("!list".getBytes());
 		
 	}
 
+	/*
+	 * syntax: !login <username> <tcpPort> <client-challenge>
+	 */
 	public void login(String username) {
-		tcpCommunication.send("!login" + " " + username);
-//		tcpCommunication.send("!login" + " " + username + " " + udpPort);
-		
+		// generates a 32 byte secure random number => client-challenge
+		SecureRandom secureRandom = new SecureRandom();
+		final byte[] number = new byte[32];
+		secureRandom.nextBytes(number);
+		//TODO encoding challenge separately in base64
+		String clientChallenge = MyBase64.encode(number);
+		byte[] testNumber = MyBase64.decode(clientChallenge);
+		String msg = "!login" + " " + username + " " + serverTCPPort + " " + clientChallenge;
+		// message encrypted using RSA initialized with the public key of the auction server
+		// encode overall msg in base64
+		try {
+			new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)), KeyReader.getPublicKey()).send(msg);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+//		channel.send(msg);
 	}
 
 	private void establishTCPConnection() {
@@ -194,7 +220,7 @@ public class Client {
 			System.out.println("Connection to Server could not be established - IOException");
 		}
 		try {
-			tcpCommunication = new TCPCommunication(clientSocket);
+			channel = new TCPChannel(clientSocket);
 		} catch (IOException e) {
 			System.out.println("Communications with Server could not be established - IOException");
 		}
@@ -373,7 +399,7 @@ public class Client {
 	 * Sends the !list command to the server
 	 */
 	public void list() {
-		tcpCommunication.send("!list" + " " + username);
+		channel.send(("!list" + " " + username).getBytes());
 	}
 
 	/**
@@ -382,7 +408,7 @@ public class Client {
 	 * @param description
 	 */
 	public void createAuction(int seconds, String description) {
-		tcpCommunication.send("!create" + " " + username + " "  + seconds + " " + description);
+		channel.send(("!create" + " " + username + " "  + seconds + " " + description).getBytes());
 
 	}
 
@@ -392,14 +418,14 @@ public class Client {
 	 * @param amount
 	 */
 	public void placeBid(int ID, double amount) {
-		tcpCommunication.send("!bid" + " " + username + " " + ID + " " + amount);
+		channel.send(("!bid" + " " + username + " " + ID + " " + amount).getBytes());
 	}
 
 	/**
 	 * Sends a message to the server to log the user out.
 	 */
 	public void logout() {
-		tcpCommunication.send("!logout" + " " + username);
+		channel.send(("!logout" + " " + username).getBytes());
 	}
 
 	/**

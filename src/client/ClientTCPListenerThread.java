@@ -2,22 +2,27 @@ package client;
 
 import java.io.IOException;
 
-import communication.TCPCommunication;
+import communication.Channel;
 
+/**
+ * 
+ * @author Babz
+ *
+ */
 public class ClientTCPListenerThread extends Thread {
 
-	private TCPCommunication tcpCommunication;
+	private Channel channel;
 	private Client client;
 	
-	public ClientTCPListenerThread(TCPCommunication tcpCommunication, Client client) {
-		this.tcpCommunication = tcpCommunication;
+	public ClientTCPListenerThread(Channel channel, Client client) {
+		this.channel = channel;
 		this.client = client;
 	}
 	
 	public void run() {
 		while(client.getClientStatus() && !interrupted()) {
 			try {
-				String receivedMessage = tcpCommunication.receive();
+				String receivedMessage = channel.receive();
 				if(receivedMessage == null) {
 					exit();
 					break;

@@ -16,12 +16,12 @@ public abstract class DecoratorChannel implements Channel {
 	}
 	
 	@Override
-	public void send(String msg) {
+	public void send(byte[] msg) {
 		decoratedChannel.send(msg);
 	}
 
 	@Override
-	public String receive() throws IOException {
+	public byte[] receive() throws IOException {
 		return decoratedChannel.receive();
 	}
 }

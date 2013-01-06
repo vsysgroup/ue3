@@ -16,12 +16,12 @@ public class Base64Channel extends DecoratorChannel {
 	}
 	
 	@Override
-	public void send(String msg) {
+	public void send(byte[] msg) {
 		decoratedChannel.send(encode(msg));
 	}
 	
 	@Override
-	public String receive() throws IOException {
+	public byte[] receive() throws IOException {
 		return decode(decoratedChannel.receive());
 	}
 	
@@ -30,9 +30,8 @@ public class Base64Channel extends DecoratorChannel {
 	 * @param encrypted message
 	 * @return encoded encrypted message
 	 */
-	private String encode(String msg) {
-		byte[] base64Message = Base64.encode(msg.getBytes());
-		return base64Message.toString();
+	private byte[] encode(byte[] msg) {
+		return Base64.encode(msg);
 	}
 	
 	/**
@@ -40,9 +39,8 @@ public class Base64Channel extends DecoratorChannel {
 	 * @param encoded and encrypted message
 	 * @return decoded but still encrypted message
 	 */
-	private String decode(String msg) {
-		byte[] encryptedMessage = Base64.decode(msg); 
-		return encryptedMessage.toString();
+	private byte[] decode(byte[] msg) {
+		return Base64.decode(msg); 
 	}
 
 	

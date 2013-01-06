@@ -8,6 +8,7 @@ import java.security.SecureRandom;
 import java.util.Scanner;
 
 import security.KeyReader;
+import security.KeyReader.KeyOwner;
 import security.MyBase64;
 
 
@@ -74,7 +75,7 @@ public class Client {
 		System.out.println("Starting Client.");
 		
 		establishTCPConnection();
-		clientTCPListenerThread = new ClientTCPListenerThread(channel,this);
+		clientTCPListenerThread = new ClientTCPListenerThread(channel, this);
 		clientTCPListenerThread.start();
 
 		//!!LAB2: NO UDP!!
@@ -198,17 +199,11 @@ public class Client {
 		secureRandom.nextBytes(number);
 		//TODO encoding challenge separately in base64
 		String clientChallenge = MyBase64.encode(number);
-		byte[] testNumber = MyBase64.decode(clientChallenge);
+//		byte[] testNumber = MyBase64.decode(clientChallenge);
 		String msg = "!login" + " " + username + " " + serverTCPPort + " " + clientChallenge;
 		// message encrypted using RSA initialized with the public key of the auction server
 		// encode overall msg in base64
-		try {
-			new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)), KeyReader.getPublicKey()).send(msg);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-//		channel.send(msg);
+		channel.send(msg.getBytes());		
 	}
 
 	private void establishTCPConnection() {
@@ -220,7 +215,7 @@ public class Client {
 			System.out.println("Connection to Server could not be established - IOException");
 		}
 		try {
-			channel = new TCPChannel(clientSocket);
+			channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)), KeyReader.getPublicKey(KeyOwner.SERVER));
 		} catch (IOException e) {
 			System.out.println("Communications with Server could not be established - IOException");
 		}
@@ -365,35 +360,6 @@ public class Client {
 			}
 		}
 	}
-
-	/**
-	 * This method is responsible for sending a message to the server to log the user in.
-	 * @param username
-	 * @return TCPCommunication
-	 */
-//	public TCPCommunication login(String username) {
-//		//create a socket for the connection with the server
-//		try {
-//			clientSocket = new Socket(serverHost, serverTCPPort);
-//		} catch (UnknownHostException e) {
-//			System.out.println("Could not resolve host or port!");
-//			exitClient();
-//		} catch (IOException e) {
-//			System.out.println("Could not create socket!");
-//			exitClient();
-//		}
-//		TCPCommunication communication = null;
-//
-//		try {
-//			communication = new TCPCommunication(clientSocket);
-//		} catch (IOException e) {
-//			System.out.println("Error while creating BufferedReader or PrintWriter!");
-//			exitClient();
-//		}
-//		//		communication.send("!login" + " " + username);
-//		communication.send("!login" + " " + username + " " + udpPort);
-//		return communication;
-//	}
 
 	/**
 	 * Sends the !list command to the server

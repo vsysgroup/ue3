@@ -22,8 +22,8 @@ public class ClientTCPListenerThread extends Thread {
 	public void run() {
 		while(client.getClientStatus() && !interrupted()) {
 			try {
-				String receivedMessage = channel.receive();
-				if(receivedMessage == null) {
+				String receivedMessage = new String(channel.receive());
+				if(receivedMessage == "") {
 					exit();
 					break;
 				}

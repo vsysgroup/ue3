@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
-import communication.TCPChannel;
+import communication.Channel;
 
 /**
  * Represents an auction
@@ -65,21 +65,21 @@ public class Auction {
 		return this.ID;
 	}
 	
-	synchronized public void newBid(User bidder, double amount, TCPChannel tcpCommunication) {
+	synchronized public void newBid(User bidder, double amount, Channel responseMsg) {
 		if(!bidders.contains(bidder)) {
 			bidders.add(bidder);
 			if(amount > highestBid) {
 				highestBid = amount;
 				User previousHighest = highestBidder;
 				highestBidder = bidder;
-				server.bidSuccessful(bidder, amount, description, ID, tcpCommunication);
+				server.bidSuccessful(bidder, amount, description, ID, responseMsg);
 				if(previousHighest != null) {
-					server.userOverbid(previousHighest, amount, description, ID, tcpCommunication);
+					server.userOverbid(previousHighest, amount, description, ID, responseMsg);
 				}
 				
 			}
 			else {
-				server.bidUnsuccessful(bidder, amount, highestBid, description, tcpCommunication);
+				server.bidUnsuccessful(bidder, amount, highestBid, description, responseMsg);
 			}
 		}
 		else {
@@ -88,11 +88,11 @@ public class Auction {
 				User previousHighest = highestBidder;
 				highestBidder = bidder;
 				if(previousHighest != null) {
-					server.userOverbid(previousHighest, amount, description, ID, tcpCommunication);
+					server.userOverbid(previousHighest, amount, description, ID, responseMsg);
 				}
 			}
 			else{
-				server.bidUnsuccessful(bidder, amount, highestBid, description, tcpCommunication);
+				server.bidUnsuccessful(bidder, amount, highestBid, description, responseMsg);
 			}
 		}
 	}

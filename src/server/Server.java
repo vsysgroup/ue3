@@ -1,9 +1,7 @@
 package server;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -27,7 +25,7 @@ import analyticsServer.UserEvent;
 import billingServer.IBillingServer;
 import billingServer.IBillingServerSecure;
 
-import communication.TCPChannel;
+import communication.Channel;
 
 import exception.WrongParameterCountException;
 
@@ -117,19 +115,11 @@ public class Server {
 	/**
 	 * Receives a message and a socket and processes the message
 	 * @param message
-	 * @param socket
+	 * @param responseMsg
 	 */
-	public void receiveMessage(String message, Socket socket) {
-		InetAddress inetAddress = socket.getInetAddress();
-
+	public void receiveMessage(String message, Channel responseMsg) {
 		String[] input = message.split(" ");
-		TCPChannel responseTCPCommunication = null;
-		try {
-			 responseTCPCommunication = new TCPChannel(socket);
-		} catch (IOException e1) {
-			e1.printStackTrace();
-		}
-
+		
 		/**
 		 * logs the user in
 		 * sends the following responses:
@@ -137,12 +127,13 @@ public class Server {
 		 * login failed
 		 */
 		if(input[0].equals("!login")) {
+//			incoming msg: "!login <username> <tcpPort> <client-challenge>"
 			String username = input[1];
-//			int port = Integer.parseInt(input[2]);
-			int port = 0;
+			int tcpPort = Integer.getInteger(input[2]);
+			String clientChallenge = input[3];
 
 			if(!userKnown(username)){
-				User newUser = new User(username, inetAddress, port);
+				User newUser = new User(username);
 				users.add(newUser);
 				newUser.logIn();
 
@@ -154,22 +145,16 @@ public class Server {
 					}
 				}
 //				new UDPNotificationThread(inetAddress, port, "login successful" + " " + username).start();
-				responseTCPCommunication.send("login successful" + " " + username);
+				responseMsg.send(("login successful" + " " + username).getBytes());
 			}
 			else{
 				User user = findUser(username);
 				if(user.loggedIn()) {
 //					new UDPNotificationThread(inetAddress, port, "login failed").start();
-					responseTCPCommunication.send("login failed");
+					responseMsg.send(("login failed").getBytes());
 				}
 				else{
 					user.logIn();
-					if(user.getPort() != port) {
-						user.setPort(port);
-					}
-					if(!user.getInetAddress().equals(inetAddress)) {
-						user.setInetAddress(inetAddress);
-					}
 					
 					if(analyticsHandler != null) {
 						try {
@@ -180,11 +165,11 @@ public class Server {
 					}
 					
 //					new UDPNotificationThread(inetAddress, port, "login successful" + " " + username).start();
-					responseTCPCommunication.send("login successful" + " " + username);
+					responseMsg.send(("login successful" + " " + username).getBytes());
 					if(user.getSavedMessages().size() > 0) {
 						for(int i = 0; i < user.getSavedMessages().size(); i++) {
 //							new UDPNotificationThread(inetAddress, port, user.getSavedMessages().get(i)).start();
-							responseTCPCommunication.send(user.getSavedMessages().get(i));
+							responseMsg.send((user.getSavedMessages().get(i)).getBytes());
 						}
 						user.clearMessages();
 					}
@@ -200,7 +185,6 @@ public class Server {
 		if(input[0].equals("!logout")) {
 			String username = input[1];
 			User user = findUser(username);
-			int port = user.getPort();
 			if(user.loggedIn()) {
 				user.logOut();
 				if(analyticsHandler != null) {
@@ -212,7 +196,7 @@ public class Server {
 				}
 				
 //				new UDPNotificationThread(inetAddress, port, "logout successful" + " " + username).start();
-				responseTCPCommunication.send("logout successful" + " " + username);
+				responseMsg.send(("logout successful" + " " + username).getBytes());
 			}
 		}
 
@@ -224,7 +208,6 @@ public class Server {
 		if(input[0].equals("!create")) {
 			String username = input[1];
 			User user = findUser(username);
-			int port = user.getPort();
 			Long seconds = Long.parseLong(input[2]);
 			String description = "";
 			for(int i = 3; i < input.length; i++) {
@@ -245,7 +228,7 @@ public class Server {
 			
 			
 //			new UDPNotificationThread(inetAddress, port, "create successful" + " " + ID + " " + endDate + " " + description).start();
-			responseTCPCommunication.send("create successful" + " " + ID + " " + endDate + " " + description);
+			responseMsg.send(("create successful" + " " + ID + " " + endDate + " " + description).getBytes());
 		}
 
 		/**
@@ -257,7 +240,7 @@ public class Server {
 
 			String list = buildList();
 //			new UDPNotificationThread(returnAddress, port, "list" + " " + list).start();
-			responseTCPCommunication.send("list " + list);
+			responseMsg.send(("list " + list).getBytes());
 			
 		}
 
@@ -267,7 +250,7 @@ public class Server {
 		if(input[0].equals("!bid")) {
 			String username = input[1];
 			User user = findUser(username);
-			findAuctionByID(input[2]).newBid(user, Double.parseDouble(input[3]), responseTCPCommunication);
+			findAuctionByID(input[2]).newBid(user, Double.parseDouble(input[3]), responseMsg);
 		}
 	}
 
@@ -356,11 +339,9 @@ public class Server {
 	 * @param amountHighestBid
 	 * @param description
 	 */
-	public void bidUnsuccessful(User bidder, double amountBid, double amountHighestBid, String description, TCPChannel responseTCPCommunication) {
-		InetAddress inetAddress = bidder.getInetAddress();
-		int port = bidder.getPort();
+	public void bidUnsuccessful(User bidder, double amountBid, double amountHighestBid, String description, Channel responseMsg) {
 //		new UDPNotificationThread(inetAddress, port, "bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description).start();
-		responseTCPCommunication.send("bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description);
+		responseMsg.send(("bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description).getBytes());
 	}
 
 	/**
@@ -481,9 +462,7 @@ public class Server {
 	 * @param amount
 	 * @param description
 	 */
-	public void bidSuccessful(User bidder, double amount, String description, int auctionID, TCPChannel tcpCommunication) {
-		InetAddress inetAddress = bidder.getInetAddress();
-		int port = bidder.getPort();
+	public void bidSuccessful(User bidder, double amount, String description, int auctionID, Channel responseMsg) {
 		if(analyticsHandler != null) {
 			try {
 				analyticsHandler.processEvent(new BidEvent("BID_PLACED",bidder.getUsername(), (long) auctionID, amount));
@@ -493,7 +472,7 @@ public class Server {
 		}
 		
 //		new UDPNotificationThread(inetAddress, port, "bid" + " " + "successful" + " " + amount + " "  + description).start();
-		tcpCommunication.send("bid" + " " + "successful" + " " + amount + " "  + description);
+		responseMsg.send(("bid" + " " + "successful" + " " + amount + " "  + description).getBytes());
 	}
 
 	/**
@@ -501,9 +480,7 @@ public class Server {
 	 * @param bidder
 	 * @param description
 	 */
-	public void userOverbid(User bidder, double amount, String description, int auctionID, TCPChannel tcpCommunication) {
-		InetAddress inetAddress = bidder.getInetAddress();
-		int port = bidder.getPort();
+	public void userOverbid(User bidder, double amount, String description, int auctionID, Channel responseMsg) {
 		if(analyticsHandler != null) {
 			try {
 				analyticsHandler.processEvent(new BidEvent("BID_OVERBID",bidder.getUsername(), (long) auctionID, amount));
@@ -517,7 +494,7 @@ public class Server {
 		}
 		else {
 //			new UDPNotificationThread(inetAddress, port, "!new-bid" + " " + description).start();
-			tcpCommunication.send("bid" + " " + "successful" + " " + amount + " "  + description);
+			responseMsg.send(("bid" + " " + "successful" + " " + amount + " "  + description).getBytes());
 
 		}
 	}

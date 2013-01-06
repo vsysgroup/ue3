@@ -27,8 +27,9 @@ public class TCPChannel implements Channel {
 	 * @param message
 	 * @return boolean
 	 */
-	public void send(String message) {
-		out.println(message);
+	public void send(byte[] message) {
+		String tmp = new String(message);
+		out.println(tmp);
 //		return true;
 	}
 	
@@ -37,8 +38,9 @@ public class TCPChannel implements Channel {
 	 * @return received message as String
 	 * @throws IOException
 	 */
-	public String receive() throws IOException {
+	public byte[] receive() throws IOException {
 		String message = in.readLine();
-		return message;
+		byte[] tmp = message.getBytes();
+		return tmp;
 	}
 }

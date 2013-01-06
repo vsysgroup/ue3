@@ -50,55 +50,5 @@ public class ServerTCPListenerThread extends Thread {
 		}
 		return;
 	}
-	
-//	public void run() {
-//		while(server.getServerStatus() && !interrupted()) {
-//			Socket socket = null;
-//			try {
-//				socket = serverSocket.accept();
-//				sockets.add(socket);
-//			} catch (IOException e) {
-//				//System.out.println("An error occured when creating a socket. Exiting server.");
-//				exit();
-//			}
-//			if(server.getServerStatus()) {
-//					try {
-//						tcpCommunication = new TCPCommunication(socket);
-//					} catch (IOException e1) {
-//						System.out.println("An error occured when creating a socket. Exiting server.");
-//						exit();
-//					}
-//			}
-//			
-//			if(server.getServerStatus()) {
-//					try {
-//						String message = tcpCommunication.receive();
-//						server.receiveMessage(message, socket);
-//					} catch (IOException e) {
-//						System.out.println("An error occured when creating a socket. Exiting server.");
-//						exit();
-//					}
-//			}
-//			
-//			
-//		}
-//		exit();
-//	}
-//	
-//	public void exit() {
-//		if(!server.getServerStatus()) {
-//			interrupt();
-//			//server.exit();
-//		}
-//		try {
-//			serverSocket.close();
-//		} catch (IOException e) {}
-//		try {
-//			Iterator<Socket> iter = this.sockets.iterator();
-//			while(iter.hasNext()) {
-//				Socket socket = iter.next();
-//				socket.close();
-//			}
-//		} catch (IOException e) {}
-//	}
+
 }

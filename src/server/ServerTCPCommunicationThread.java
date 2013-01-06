@@ -3,6 +3,12 @@ package server;
 import java.io.IOException;
 import java.net.Socket;
 
+import security.KeyReader;
+import security.KeyReader.KeyOwner;
+
+import communication.Base64Channel;
+import communication.Channel;
+import communication.RSAChannel;
 import communication.TCPChannel;
 
 /**
@@ -15,7 +21,7 @@ public class ServerTCPCommunicationThread extends Thread {
 	
 	private Socket clientSocket = null;
 	private Server server;
-	private TCPChannel tcpCommunication = null;
+	private Channel channel = null;
 	
 	public ServerTCPCommunicationThread(Socket socket, Server server) {
 		this.clientSocket = socket;
@@ -25,19 +31,20 @@ public class ServerTCPCommunicationThread extends Thread {
 	
 	public void run() {
 		try {
-			this.tcpCommunication = new TCPChannel(clientSocket);
+			this.channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)), KeyReader.getPublicKey(KeyOwner.ALICE));
 		} catch(IOException e) {
 			exit();
 			return;
 		}
 		while(!interrupted() && clientSocket != null){
 			try {
-				String receivedMessage = tcpCommunication.receive();
-				if(receivedMessage == null) {
+				byte[] tmp = channel.receive();
+				String receivedMessage = new String(tmp);
+				if(receivedMessage == "") {
 					exit();
 					break;
 				}
-				server.receiveMessage(receivedMessage, clientSocket);
+				server.receiveMessage(receivedMessage, channel);
 			} catch (IOException e) {
 				exit();
 			}

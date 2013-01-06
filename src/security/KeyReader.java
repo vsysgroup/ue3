@@ -14,16 +14,32 @@ import org.bouncycastle.openssl.PasswordFinder;
 
 public class KeyReader {
 
-	public static Key getPublicKey() throws IOException {
+	public enum KeyOwner {SERVER, ALICE};
+
+	public static Key getPublicKey(KeyOwner owner) throws IOException {
 		//public key
-		String pathToPublicKey = "auction-server.pub.pem";
+		String pathToPublicKey = "";
+		switch(owner) {
+			case ALICE: pathToPublicKey = "alice.pub.pem";
+				break;
+			case SERVER: pathToPublicKey = "auction-server.pub.pem";
+				break;
+		}
+
 		PEMReader in = new PEMReader(new FileReader(pathToPublicKey));
 		PublicKey publicKey = (PublicKey) in.readObject(); 
 		return publicKey;
 	}
 
-	public Key getPrivateKey() throws IOException {
+	public Key getPrivateKey(KeyOwner owner) throws IOException {
 		String pathToPrivateKey = "auction-server.pem";
+		switch(owner) {
+			case ALICE: pathToPrivateKey = "alice.pem";
+				break;
+			case SERVER: pathToPrivateKey = "auction-server.pem";
+				break;
+		}
+		
 		PEMReader in = new PEMReader(new FileReader(pathToPrivateKey), new PasswordFinder() {
 
 			@Override

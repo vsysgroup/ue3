@@ -12,8 +12,6 @@ import javax.crypto.NoSuchPaddingException;
 
 import org.apache.log4j.Logger;
 
-import security.KeyReader;
-
 public class RSAChannel extends DecoratorChannel {
 
 	public static final Logger LOG = Logger.getLogger(RSAChannel.class);
@@ -26,13 +24,12 @@ public class RSAChannel extends DecoratorChannel {
 
 	@Override
 	public void send(byte[] out) {
-		decoratedChannel.send(encrypt(out));
+		decoratedChannel.send(out);
 	}
 
 	@Override
 	public byte[] receive() throws IOException {
-		decoratedChannel.receive();
-		return null;
+		return decoratedChannel.receive();
 	}
 
 	private byte[] encrypt(byte[] msg) {
@@ -44,7 +41,7 @@ public class RSAChannel extends DecoratorChannel {
 			// KEY is either a private, public or secret key
 			// IV is an init vector, needed for AES
 			crypt.init(Cipher.ENCRYPT_MODE, key);
-			encryptedMsg = crypt.doFinal(msg.getBytes());
+			encryptedMsg = crypt.doFinal(msg);
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

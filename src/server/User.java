@@ -87,7 +87,7 @@ public class User {
 		this.lastMessage = message;
 	}
 	
-	public String getLastMessage(String message) {
+	public String getLastMessage() {
 		return lastMessage;
 	}
 

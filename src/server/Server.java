@@ -203,10 +203,22 @@ public class Server {
 				User user = findUser(username);
 				if(user.loggedIn()) {
 					
-					//TODO: add hashMAC
+					//add hashed MAC to the message
+					Key key = user.getKey();
+					String returnMessage =	"login failed";	
+					try {
+						byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+						byte[] encodedHMAC = Base64.encode(hMAC);  
+						String append = new String(encodedHMAC);
+						user.setLastMessage(returnMessage);
+						returnMessage += " " + append;
+					} catch (InvalidKeyException e) {
+						e.printStackTrace();
+					} catch (NoSuchAlgorithmException e) {
+						e.printStackTrace();
+					}	
 					
-					user.setLastMessage("login failed");
-					responseTCPCommunication.send("login failed");
+					responseTCPCommunication.send(returnMessage);
 				}
 				else{
 					user.logIn();
@@ -225,17 +237,39 @@ public class Server {
 						}
 					}
 					
-					//TODO: add hashMAC
+					//add hashed MAC to the message
+					Key key = user.getKey();
+					String returnMessage =	"login successful" + " " + username;	
+					try {
+						byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+						byte[] encodedHMAC = Base64.encode(hMAC);  
+						String append = new String(encodedHMAC);
+						user.setLastMessage(returnMessage);
+						returnMessage += " " + append;
+					} catch (InvalidKeyException e) {
+						e.printStackTrace();
+					} catch (NoSuchAlgorithmException e) {
+						e.printStackTrace();
+					}	
 					
-					user.setLastMessage("login successful" + " " + username);
-					responseTCPCommunication.send("login successful" + " " + username);
+					responseTCPCommunication.send(returnMessage);
 					if(user.getSavedMessages().size() > 0) {
 						for(int i = 0; i < user.getSavedMessages().size(); i++) {
 							
-							//TODO: add hashMAC
-							
-							user.setLastMessage(user.getSavedMessages().get(i));
-							responseTCPCommunication.send(user.getSavedMessages().get(i));
+							//add hashed MAC to the message
+							String returnMessage2 =	user.getSavedMessages().get(i);	
+							try {
+								byte[] hMAC = integrityManager.createHashMAC(key, returnMessage2);				
+								byte[] encodedHMAC = Base64.encode(hMAC);  
+								String append = new String(encodedHMAC);
+								user.setLastMessage(returnMessage2);
+								returnMessage2 += " " + append;
+							} catch (InvalidKeyException e) {
+								e.printStackTrace();
+							} catch (NoSuchAlgorithmException e) {
+								e.printStackTrace();
+							}	
+							responseTCPCommunication.send(returnMessage2);
 						}
 						user.clearMessages();
 					}
@@ -261,10 +295,21 @@ public class Server {
 					}
 				}
 				
-				//TODO: add hashMAC
-				
-				user.setLastMessage("logout successful" + " " + username);
-				responseTCPCommunication.send("logout successful" + " " + username);
+				//add hashed MAC to the message
+				Key key = user.getKey();
+				String returnMessage =	"logout successful" + " " + username;	
+				try {
+					byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+					byte[] encodedHMAC = Base64.encode(hMAC);  
+					String append = new String(encodedHMAC);
+					user.setLastMessage(returnMessage);
+					returnMessage += " " + append;
+				} catch (InvalidKeyException e) {
+					e.printStackTrace();
+				} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+				}	
+				responseTCPCommunication.send(returnMessage);
 			}
 		}
 
@@ -296,10 +341,21 @@ public class Server {
 			}
 			
 			
-			//TODO: add hashMAC
-		
-			user.setLastMessage("create successful" + " " + ID + " " + endDate + " " + description);
-			responseTCPCommunication.send("create successful" + " " + ID + " " + endDate + " " + description);
+			//add hashed MAC to the message
+			Key key = user.getKey();
+			String returnMessage =	"create successful" + " " + ID + " " + endDate + " " + description;	
+			try {
+				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+				byte[] encodedHMAC = Base64.encode(hMAC);  
+				String append = new String(encodedHMAC);
+				user.setLastMessage(returnMessage);
+				returnMessage += " " + append;
+			} catch (InvalidKeyException e) {
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}	
+			responseTCPCommunication.send(returnMessage);
 		}
 
 		/**
@@ -351,6 +407,28 @@ public class Server {
 			String username = input[1];
 			User user = findUser(username);
 			findAuctionByID(input[2]).newBid(user, Double.parseDouble(input[3]), responseTCPCommunication);
+		}
+		
+		/**
+		 * repeats a message sent to the user
+		 */
+		if(input[0].equals("!repeat")) {
+			String username = input[1];
+			User user = findUser(username);
+			//add hashed MAC to the message
+			Key key = user.getKey();
+			String returnMessage =	user.getLastMessage();	
+			try {
+				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+				byte[] encodedHMAC = Base64.encode(hMAC);  
+				String append = new String(encodedHMAC);
+				returnMessage += " " + append;
+			} catch (InvalidKeyException e) {
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}	
+			responseTCPCommunication.send(returnMessage);
 		}
 	}
 
@@ -441,10 +519,21 @@ public class Server {
 	 */
 	public void bidUnsuccessful(User bidder, double amountBid, double amountHighestBid, String description, TCPCommunication responseTCPCommunication) {
 		
-		//TODO: add hashMAC
-		
-		bidder.setLastMessage("bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description);
-		responseTCPCommunication.send("bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description);
+		//add hashed MAC to the message
+		Key key = bidder.getKey();
+		String returnMessage =	"bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description;	
+		try {
+			byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+			byte[] encodedHMAC = Base64.encode(hMAC);  
+			String append = new String(encodedHMAC);
+			bidder.setLastMessage(returnMessage);
+			returnMessage += " " + append;
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}	
+		responseTCPCommunication.send(returnMessage);
 	}
 
 	/**
@@ -575,10 +664,20 @@ public class Server {
 			}
 		}
 		
-		//TODO: add hashMAC
-		
-		bidder.setLastMessage("bid" + " " + "successful" + " " + amount + " "  + description);
-		tcpCommunication.send("bid" + " " + "successful" + " " + amount + " "  + description);
+		Key key = bidder.getKey();
+		String returnMessage =	"bid" + " " + "successful" + " " + amount + " "  + description;	
+		try {
+			byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+			byte[] encodedHMAC = Base64.encode(hMAC);  
+			String append = new String(encodedHMAC);
+			bidder.setLastMessage(returnMessage);
+			returnMessage += " " + append;
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}	
+		tcpCommunication.send(returnMessage);
 	}
 
 	/**
@@ -600,10 +699,20 @@ public class Server {
 		}
 		else {
 			
-			//TODO: add hashMAC
-			
-			bidder.setLastMessage("bid" + " " + "successful" + " " + amount + " "  + description);
-			tcpCommunication.send("bid" + " " + "successful" + " " + amount + " "  + description);
+			Key key = bidder.getKey();
+			String returnMessage =	"bid" + " " + "successful" + " " + amount + " "  + description;	
+			try {
+				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+				byte[] encodedHMAC = Base64.encode(hMAC);  
+				String append = new String(encodedHMAC);
+				bidder.setLastMessage(returnMessage);
+				returnMessage += " " + append;
+			} catch (InvalidKeyException e) {
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}	
+			tcpCommunication.send(returnMessage);
 
 		}
 	}

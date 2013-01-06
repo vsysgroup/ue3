@@ -219,8 +219,6 @@ public class Client {
 		String response = message;
 		String[] splitResponse = response.split(" ");
 		
-		boolean verified = verifyMessage(message, splitResponse);
-		System.out.println(verified);
 
 		/**
 		 * accepts the following responses:
@@ -228,6 +226,7 @@ public class Client {
 		 * login successful <username>
 		 */
 		if(splitResponse[0].equals("login")) {
+			
 			if(splitResponse[1].equals("failed")) {
 				System.out.println("Somebody is already logged in with that name. Please choose a different name and try again.");
 			} 
@@ -235,6 +234,11 @@ public class Client {
 				System.out.println("successfully logged in as " + splitResponse[2] + "!");
 				setUsername(splitResponse[2]);
 				setLoggedIn();
+			}
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
 			}
 		}
 
@@ -251,6 +255,11 @@ public class Client {
 				System.out.println("successfully logged out as " + splitResponse[2] + "!");
 				setUsername("");
 				setLoggedOut();
+			}
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
 			}
 		}
 
@@ -318,7 +327,7 @@ public class Client {
 			}
 			else if(splitResponse[1].equals("successful")) {
 				String description = "";
-				for(int i = 6; i < splitResponse.length; i++) {
+				for(int i = 6; i < splitResponse.length-1; i++) {
 					description += splitResponse[i];
 					description += " ";
 				}
@@ -328,6 +337,11 @@ public class Client {
 						+ splitResponse[3] + " "
 						+ splitResponse[4] + " "
 						+ splitResponse[5] + ".");
+			}
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
 			}
 		}
 
@@ -343,7 +357,7 @@ public class Client {
 			}
 			else if(splitResponse[1].equals("successful")) {
 				String description = "";
-				for(int i = 3; i < splitResponse.length; i++) {
+				for(int i = 3; i < splitResponse.length-1; i++) {
 					description += splitResponse[i];
 					description += " ";
 				}
@@ -352,13 +366,18 @@ public class Client {
 			}
 			else if(splitResponse[1].equals("unsuccessful")) {
 				String description = "";
-				for(int i = 4; i < splitResponse.length; i++) {
+				for(int i = 4; i < splitResponse.length-1; i++) {
 					description += splitResponse[i];
 					description += " ";
 				}
 				description.trim();
 				System.out.println("You unsuccessfully bid with " + splitResponse[2] + " on '" + description +"'."
 						+ " Current highest bid is " + splitResponse[3]);
+			}
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
 			}
 		}
 
@@ -368,13 +387,17 @@ public class Client {
 		 */
 		else if(splitResponse[0].equals("!new-bid")) {
 			String description = "";
-			for(int i = 1; i < splitResponse.length; i++) {
+			for(int i = 1; i < splitResponse.length-1; i++) {
 				description += splitResponse[i];
 				description += " ";
 			}
 			description.trim();
 			System.out.println("You have been overbid on '" + description + "'.");
-
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
+			}
 		}
 
 		/**
@@ -383,7 +406,7 @@ public class Client {
 		 */
 		else if(splitResponse[0].equals("!auction-ended")) {
 			String description = "";
-			for(int i = 3; i < splitResponse.length; i++) {
+			for(int i = 3; i < splitResponse.length-1; i++) {
 				description += splitResponse[i];
 				description += " ";
 			}
@@ -395,6 +418,11 @@ public class Client {
 			else {
 				System.out.println("The auction '" + description + "' has ended. You won with "
 						+ splitResponse[2] + "!");
+			}
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
 			}
 		}
 	}
@@ -427,6 +455,16 @@ public class Client {
 //		communication.send("!login" + " " + username + " " + udpPort);
 //		return communication;
 //	}
+
+	private void requestRepetition() {
+		if(!secondAttemptRequested) {
+			tcpCommunication.send("!repeat" + " " + username);
+			secondAttemptRequested = true;
+		} else {
+			secondAttemptRequested = false;
+		}
+		
+	}
 
 	/**
 	 * Sends the !list command to the server

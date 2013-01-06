@@ -160,7 +160,7 @@ public class Client {
 							description += input[i];
 							description += " ";
 						}
-						description.trim();
+						description = description.trim();
 						createAuction(Integer.parseInt(input[1]),description);
 					} catch(NumberFormatException e) {
 						System.out.println("One of the parameters is wrong.");
@@ -260,15 +260,16 @@ public class Client {
 				System.out.println(buildList(splitResponse));
 			}
 			else {
-				String removeFromMessage = " " + splitResponse[splitResponse.length-1];
-				String messageWithoutMAC = message.replaceAll(removeFromMessage, ""); 
+				String removeFromMessage1 = splitResponse[splitResponse.length-1];
+				String messageWithoutMAC = message.replace(removeFromMessage1, ""); 
+				messageWithoutMAC = messageWithoutMAC.trim();
 				
 				try {
 					
 					// create an own hMAC
 					byte[] ownMAC = integrityManager.createHashMAC(clientSecretKey, messageWithoutMAC);
 					// read the hMAC from the message
-					byte[] decodedHMAC = Base64.decode(splitResponse[splitResponse.length-1]);  
+					byte[] decodedHMAC = Base64.decode(splitResponse[splitResponse.length-1]); 
 					
 					//compare the two hMACs
 					boolean match = integrityManager.verifyHashMAC(ownMAC, decodedHMAC);

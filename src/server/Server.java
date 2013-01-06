@@ -167,7 +167,6 @@ public class Server {
 				try {
 					newUser.setKey(integrityManager.getSecretKey(username));
 				} catch (IOException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 				
@@ -180,13 +179,19 @@ public class Server {
 						e.printStackTrace();
 					}
 				}
-//				new UDPNotificationThread(inetAddress, port, "login successful" + " " + username).start();
+				
+				//TODO: add hashMAC
+				
+				newUser.setLastMessage("login successful" + " " + username);
 				responseTCPCommunication.send("login successful" + " " + username);
 			}
 			else{
 				User user = findUser(username);
 				if(user.loggedIn()) {
-//					new UDPNotificationThread(inetAddress, port, "login failed").start();
+					
+					//TODO: add hashMAC
+					
+					user.setLastMessage("login failed");
 					responseTCPCommunication.send("login failed");
 				}
 				else{
@@ -206,11 +211,16 @@ public class Server {
 						}
 					}
 					
-//					new UDPNotificationThread(inetAddress, port, "login successful" + " " + username).start();
+					//TODO: add hashMAC
+					
+					user.setLastMessage("login successful" + " " + username);
 					responseTCPCommunication.send("login successful" + " " + username);
 					if(user.getSavedMessages().size() > 0) {
 						for(int i = 0; i < user.getSavedMessages().size(); i++) {
-//							new UDPNotificationThread(inetAddress, port, user.getSavedMessages().get(i)).start();
+							
+							//TODO: add hashMAC
+							
+							user.setLastMessage(user.getSavedMessages().get(i));
 							responseTCPCommunication.send(user.getSavedMessages().get(i));
 						}
 						user.clearMessages();
@@ -227,7 +237,6 @@ public class Server {
 		if(input[0].equals("!logout")) {
 			String username = input[1];
 			User user = findUser(username);
-			int port = user.getPort();
 			if(user.loggedIn()) {
 				user.logOut();
 				if(analyticsHandler != null) {
@@ -238,7 +247,9 @@ public class Server {
 					}
 				}
 				
-//				new UDPNotificationThread(inetAddress, port, "logout successful" + " " + username).start();
+				//TODO: add hashMAC
+				
+				user.setLastMessage("logout successful" + " " + username);
 				responseTCPCommunication.send("logout successful" + " " + username);
 			}
 		}
@@ -251,13 +262,13 @@ public class Server {
 		if(input[0].equals("!create")) {
 			String username = input[1];
 			User user = findUser(username);
-			int port = user.getPort();
 			Long seconds = Long.parseLong(input[2]);
 			String description = "";
 			for(int i = 3; i < input.length; i++) {
 				description += input[i];
 				description += " ";
 			}
+			description = description.trim();
 			Auction newAuction = createAuction(user, seconds, description);
 			String endDate = newAuction.dateToString();
 			int ID = newAuction.getID();
@@ -271,7 +282,9 @@ public class Server {
 			}
 			
 			
-//			new UDPNotificationThread(inetAddress, port, "create successful" + " " + ID + " " + endDate + " " + description).start();
+			//TODO: add hashMAC
+		
+			user.setLastMessage("create successful" + " " + ID + " " + endDate + " " + description);
 			responseTCPCommunication.send("create successful" + " " + ID + " " + endDate + " " + description);
 		}
 
@@ -283,7 +296,6 @@ public class Server {
 		if(input[0].equals("!list") && input.length == 1) {
 
 			String list = buildList();
-//			new UDPNotificationThread(returnAddress, port, "list" + " " + list).start();
 			responseTCPCommunication.send("list " + list);
 			
 		}
@@ -413,9 +425,10 @@ public class Server {
 	 * @param description
 	 */
 	public void bidUnsuccessful(User bidder, double amountBid, double amountHighestBid, String description, TCPCommunication responseTCPCommunication) {
-		InetAddress inetAddress = bidder.getInetAddress();
-		int port = bidder.getPort();
-//		new UDPNotificationThread(inetAddress, port, "bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description).start();
+		
+		//TODO: add hashMAC
+		
+		bidder.setLastMessage("bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description);
 		responseTCPCommunication.send("bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description);
 	}
 
@@ -528,6 +541,7 @@ public class Server {
 			list += ID + ". " + "'" + description + "'" + " " + owner + " " + endDate + " " + highestBid + " " + highestBidderName;
 			list += " -|- ";
 		}
+		list = list.trim();
 		return list;
 	}
 
@@ -538,8 +552,6 @@ public class Server {
 	 * @param description
 	 */
 	public void bidSuccessful(User bidder, double amount, String description, int auctionID, TCPCommunication tcpCommunication) {
-		InetAddress inetAddress = bidder.getInetAddress();
-		int port = bidder.getPort();
 		if(analyticsHandler != null) {
 			try {
 				analyticsHandler.processEvent(new BidEvent("BID_PLACED",bidder.getUsername(), (long) auctionID, amount));
@@ -548,7 +560,9 @@ public class Server {
 			}
 		}
 		
-//		new UDPNotificationThread(inetAddress, port, "bid" + " " + "successful" + " " + amount + " "  + description).start();
+		//TODO: add hashMAC
+		
+		bidder.setLastMessage("bid" + " " + "successful" + " " + amount + " "  + description);
 		tcpCommunication.send("bid" + " " + "successful" + " " + amount + " "  + description);
 	}
 
@@ -558,8 +572,6 @@ public class Server {
 	 * @param description
 	 */
 	public void userOverbid(User bidder, double amount, String description, int auctionID, TCPCommunication tcpCommunication) {
-		InetAddress inetAddress = bidder.getInetAddress();
-		int port = bidder.getPort();
 		if(analyticsHandler != null) {
 			try {
 				analyticsHandler.processEvent(new BidEvent("BID_OVERBID",bidder.getUsername(), (long) auctionID, amount));
@@ -572,7 +584,10 @@ public class Server {
 			bidder.addMessage("!new-bid" + description);
 		}
 		else {
-//			new UDPNotificationThread(inetAddress, port, "!new-bid" + " " + description).start();
+			
+			//TODO: add hashMAC
+			
+			bidder.setLastMessage("bid" + " " + "successful" + " " + amount + " "  + description);
 			tcpCommunication.send("bid" + " " + "successful" + " " + amount + " "  + description);
 
 		}

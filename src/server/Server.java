@@ -180,10 +180,24 @@ public class Server {
 					}
 				}
 				
-				//TODO: add hashMAC
+				//add hashed MAC to the message
 				
-				newUser.setLastMessage("login successful" + " " + username);
-				responseTCPCommunication.send("login successful" + " " + username);
+				Key key = newUser.getKey();
+				String returnMessage =	"login successful" + " " + username;	
+				try {
+					byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+					byte[] encodedHMAC = Base64.encode(hMAC);  
+					String append = new String(encodedHMAC);
+					newUser.setLastMessage(returnMessage);
+					returnMessage += " " + append;
+				} catch (InvalidKeyException e) {
+					e.printStackTrace();
+				} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+				}	
+				
+				
+				responseTCPCommunication.send(returnMessage);
 			}
 			else{
 				User user = findUser(username);
@@ -315,6 +329,7 @@ public class Server {
 			
 			String list = buildList();
 			String returnMessage = "list " + list;
+			//add hashed MAC to the message
 			try {
 				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
 				byte[] encodedHMAC = Base64.encode(hMAC);  

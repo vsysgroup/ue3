@@ -218,6 +218,9 @@ public class Client {
 	public void receiveResponse(String message) {
 		String response = message;
 		String[] splitResponse = response.split(" ");
+		
+		boolean verified = verifyMessage(message, splitResponse);
+		System.out.println(verified);
 
 		/**
 		 * accepts the following responses:
@@ -558,8 +561,30 @@ public class Client {
 		} catch(IOException e) {
 			System.out.println("Error while closing Socket!");
 		}
-
-
+	}
+	public boolean verifyMessage(String message, String[] splitResponse) {
+		
+		String removeFromMessage1 = splitResponse[splitResponse.length-1];
+		String messageWithoutMAC = message.replace(removeFromMessage1, ""); 
+		messageWithoutMAC = messageWithoutMAC.trim();
+		boolean match = true;
+		try {
+			
+			// create an own hMAC
+			byte[] ownMAC = integrityManager.createHashMAC(clientSecretKey, messageWithoutMAC);
+			// read the hMAC from the message
+			byte[] decodedHMAC = Base64.decode(splitResponse[splitResponse.length-1]); 
+			
+			//compare the two hMACs
+			match = integrityManager.verifyHashMAC(ownMAC, decodedHMAC);
+			
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		
+		return match;
 	}
 
 

@@ -436,8 +436,9 @@ public class Server {
 	}
 
 	public static void howToUse() {
-		System.out.println("Parameters incorrect. Correct syntax: java Server <tcpPort>");
+		System.out.println("Parameters incorrect. Correct syntax: java Server <tcpPort> <bindingNameAnalyticServer> <bindingNameBillingServer> <pathToServerKey> <pathToKeyDirectory>");
 	}
+
 	/**
 	 * returns the server Status
 	 * @return boolean

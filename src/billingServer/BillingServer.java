@@ -21,7 +21,7 @@ import registry.RegistryReader;
 public class BillingServer {
 
 	public static final Logger LOG = Logger.getLogger(BillingServer.class);
-	private static String bindingName = "BillingServer";
+	private static String bindingName;
 	
 	/**
 	 * @param args
@@ -31,9 +31,13 @@ public class BillingServer {
 		//init logger
 		BasicConfigurator.configure();
 		
-		new BillingServer();
+		new BillingServer(args);
 		
 		setupRMI();
+	}
+	
+	public BillingServer(String[] args) {
+		bindingName = args[0];
 	}
 
 	/**

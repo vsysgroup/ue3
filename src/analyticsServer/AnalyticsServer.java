@@ -23,7 +23,7 @@ import registry.RegistryReader;
 public class AnalyticsServer {
 	
 	public static final Logger LOG = Logger.getLogger(AnalyticsServer.class);
-	private static String bindingName = "AnalyticsServer";
+	private static String bindingName;
 	private static AnalyticsServerInterface analyticsServer;
 	
 	private static Scanner in = new Scanner(System.in);
@@ -37,7 +37,7 @@ public class AnalyticsServer {
 		
 		LOG.info("Starting Analytics Server.");
 		
-		new AnalyticsServer();
+		new AnalyticsServer(args);
 		
 		setupRMI();
 		
@@ -55,6 +55,10 @@ public class AnalyticsServer {
 			}
 		}
 		LOG.info("Analytics Server shutting down");
+	}
+	
+	public AnalyticsServer(String[] args) {
+		bindingName = args[0];
 	}
 
 	private static void setupRMI() {

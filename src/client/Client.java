@@ -6,24 +6,22 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Scanner;
+
+import org.bouncycastle.util.encoders.Base64;
 
 import security.KeyReader;
 import security.KeyReader.KeyOwner;
 import security.MyBase64;
 
-
 import communication.Base64Channel;
 import communication.Channel;
 import communication.RSAChannel;
 import communication.TCPChannel;
-import java.security.InvalidKeyException;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
-import java.util.Scanner;
-
-import org.bouncycastle.util.encoders.Base64;
 
 import exception.WrongParameterCountException;
 
@@ -37,7 +35,6 @@ public class Client {
 
 	private String serverHost;
 	private int serverTCPPort;
-//	private int udpPort;
 	private Socket clientSocket = null;
 	private Boolean clientStatus = false;
 	private Boolean loggedIn = false;
@@ -45,7 +42,6 @@ public class Client {
 	private Channel channel = null;
 	private String username = "";
 	private DatagramSocket datagramSocket = null;
-//	private ClientUDPListenerThread clientUDPListenerThread = null;
 	private ClientTCPListenerThread clientTCPListenerThread = null;
 	private int clientPort;
 	
@@ -452,7 +448,7 @@ public class Client {
 
 	private void requestRepetition() {
 		if(!secondAttemptRequested) {
-			tcpCommunication.send("!repeat" + " " + username);
+			channel.send(("!repeat" + " " + username).getBytes());
 			secondAttemptRequested = true;
 		} else {
 			secondAttemptRequested = false;

@@ -2,6 +2,11 @@ package security;
 
 import org.bouncycastle.util.encoders.Base64;
 
+/**
+ * 
+ * @author Barbara Schwankl 0852176
+ *
+ */
 public class MyBase64 {
 
 	public static String encode(byte[] msg) {

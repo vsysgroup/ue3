@@ -149,7 +149,7 @@ public class Server {
 		if(input[0].equals("!login")) {
 //			incoming msg: "!login <username> <tcpPort> <client-challenge>"
 			String username = input[1];
-			int tcpPort = Integer.getInteger(input[2]);
+			int tcpPort = Integer.parseInt(input[2]);
 			String clientChallenge = input[3];
 
 			if(!userKnown(username)){

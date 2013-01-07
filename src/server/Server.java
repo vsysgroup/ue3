@@ -46,8 +46,8 @@ public class Server {
 	
 	
 	public static final Logger LOG = Logger.getLogger(Server.class);
-	private static String bindingNameAnalytics = "AnalyticsServer";
-	private static String bindingNameBilling = "BillingServer";
+	private static String bindingNameAnalytics;
+	private static String bindingNameBilling;
 	
 	public static String currentAuctionList = "";
 
@@ -354,7 +354,7 @@ public class Server {
 //			new UDPNotificationThread(returnAddress, port, "list" + " " + list).start();
 			responseMsg.send(("list " + list).getBytes());
 
-			responseTCPCommunication.send("list " + list);
+			responseMsg.send(("list " + list).getBytes());
 			
 		}
 		/**

@@ -6,12 +6,12 @@
     <property name="lib.dir" value="lib"/>
 
     <!-- You need to update these properties!-->
-    <property name="server.name" value="your.Server"/><!-- Server's full class name (including the package) -->
+    <property name="server.name" value="server.Server"/><!-- Server's full class name (including the package) -->
     <property name="server.host" value="localhost"/><!-- Auction Server's host -->
-    <property name="client.name" value="your.Client"/><!-- Bidding Client's full class name (including the package) -->
-    <property name="mgmtclient.name" value="your.ManagementClient"/><!-- Management Client's full class name (including the package) -->
-    <property name="analytics.name" value="your.AnalyticsServer"/><!-- Analytics Server's full class name (including the package) -->
-    <property name="billing.name" value="your.BillingServer"/><!-- Billing Server's full class name (including the package) -->
+    <property name="client.name" value="client.Client"/><!-- Bidding Client's full class name (including the package) -->
+    <property name="mgmtclient.name" value="mgmtClient.ManagementClient"/><!-- Management Client's full class name (including the package) -->
+    <property name="analytics.name" value="analyticsServer.AnalyticsServer"/><!-- Analytics Server's full class name (including the package) -->
+    <property name="billing.name" value="billingServer.BillingServer"/><!-- Billing Server's full class name (including the package) -->
     <property name="analytics.bindingName" value="AnalyticsServerRef"/><!-- RMI Binding Name of the Analytics Server -->
     <property name="billing.bindingName" value="BillingServerRef"/><!-- RMI Binding Name of the Billing Server -->
     <property name="server.port" value="13460"/><!-- TCP port -->

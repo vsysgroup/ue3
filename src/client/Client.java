@@ -1,5 +1,7 @@
 package client;
 
+import integrity.IntegrityManager;
+
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.Socket;
@@ -16,6 +18,12 @@ import communication.Base64Channel;
 import communication.Channel;
 import communication.RSAChannel;
 import communication.TCPChannel;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
+import java.util.Scanner;
+
+import org.bouncycastle.util.encoders.Base64;
 
 import exception.WrongParameterCountException;
 
@@ -39,6 +47,15 @@ public class Client {
 	private DatagramSocket datagramSocket = null;
 //	private ClientUDPListenerThread clientUDPListenerThread = null;
 	private ClientTCPListenerThread clientTCPListenerThread = null;
+	private int clientPort;
+	
+	private String pathToPublicServerKey;
+	private String pathToKeyDirectory;
+	
+	private IntegrityManager integrityManager;
+	private Key clientSecretKey;
+	
+	private Boolean secondAttemptRequested = false;
 
 	public static void main(String[] args) {
 
@@ -57,18 +74,26 @@ public class Client {
 	 * @throws WrongParameterCountException
 	 */
 	public Client(String[] args) throws WrongParameterCountException {
-		//check if parameters are alright
-//		if(args.length != 2) {
-//			throw new WrongParameterCountException();
-//		} else {
 		boolean test = false;
+		//check if parameters are alright
+		if(args.length != 5) {
+			throw new WrongParameterCountException();
+		} else {
 			this.serverHost = args[0];
 			this.serverTCPPort = Integer.parseInt(args[1]);
-			if(args.length >= 4) {
-				test = true;
+			this.clientPort = Integer.parseInt(args[2]);
+			this.pathToPublicServerKey = args[3];
+			this.pathToKeyDirectory = args[4];
+			
+			//load IntegrityManger and client's secret key
+			integrityManager = new IntegrityManager(pathToKeyDirectory);
+			try {
+				clientSecretKey = integrityManager.getSecretKey("alice");
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
-//			this.udpPort = Integer.parseInt(args[2]);
-//		}
+			
+		}
 
 		clientStatus = true;
 
@@ -77,19 +102,6 @@ public class Client {
 		establishTCPConnection();
 		clientTCPListenerThread = new ClientTCPListenerThread(channel, this);
 		clientTCPListenerThread.start();
-
-		//!!LAB2: NO UDP!!
-//		try {
-//			datagramSocket = new DatagramSocket(this.udpPort);
-//		} catch (SocketException e) {
-//			System.out.println("Could not bind to UDP port! The port may be in use." + " Port: " + udpPort);
-//			exitClient();
-//		}
-//		//		Start the listener threads
-//		new ClientTCPListenerThread(tcpCommunication, this).start();
-//		clientUDPListenerThread = new ClientUDPListenerThread(datagramSocket, this);
-//		clientUDPListenerThread.start();
-
 
 		//loop checking for input
 		while(clientStatus && !test) {
@@ -159,7 +171,7 @@ public class Client {
 							description += input[i];
 							description += " ";
 						}
-						description.trim();
+						description = description.trim();
 						createAuction(Integer.parseInt(input[1]),description);
 					} catch(NumberFormatException e) {
 						System.out.println("One of the parameters is wrong.");
@@ -228,6 +240,7 @@ public class Client {
 	public void receiveResponse(String message) {
 		String response = message;
 		String[] splitResponse = response.split(" ");
+		
 
 		/**
 		 * accepts the following responses:
@@ -235,6 +248,7 @@ public class Client {
 		 * login successful <username>
 		 */
 		if(splitResponse[0].equals("login")) {
+			
 			if(splitResponse[1].equals("failed")) {
 				System.out.println("Somebody is already logged in with that name. Please choose a different name and try again.");
 			} 
@@ -242,6 +256,11 @@ public class Client {
 				System.out.println("successfully logged in as " + splitResponse[2] + "!");
 				setUsername(splitResponse[2]);
 				setLoggedIn();
+			}
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
 			}
 		}
 
@@ -259,6 +278,11 @@ public class Client {
 				setUsername("");
 				setLoggedOut();
 			}
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
+			}
 		}
 
 		/**
@@ -266,7 +290,52 @@ public class Client {
 		 * list <list as String>
 		 */
 		else if(splitResponse[0].equals("list")) {
-			System.out.println(buildList(splitResponse));
+			if(!loggedIn) {
+				System.out.println(buildList(splitResponse));
+			}
+			else {
+				String removeFromMessage1 = splitResponse[splitResponse.length-1];
+				String messageWithoutMAC = message.replace(removeFromMessage1, ""); 
+				messageWithoutMAC = messageWithoutMAC.trim();
+				
+				try {
+					
+					// create an own hMAC
+					byte[] ownMAC = integrityManager.createHashMAC(clientSecretKey, messageWithoutMAC);
+					// read the hMAC from the message
+					byte[] decodedHMAC = Base64.decode(splitResponse[splitResponse.length-1]); 
+					
+					//compare the two hMACs
+					boolean match = integrityManager.verifyHashMAC(ownMAC, decodedHMAC);
+					
+					if(match) {
+						String [] newSplitResponse = new String[splitResponse.length-1];
+						for(int i = 0; i < splitResponse.length-1; i++) {
+							newSplitResponse[i] = splitResponse[i];
+						}
+						System.out.println(buildList(newSplitResponse));
+					}
+					else {
+						String [] newSplitResponse = new String[splitResponse.length-1];
+						for(int i = 0; i < splitResponse.length-1; i++) {
+							newSplitResponse[i] = splitResponse[i];
+						}
+						System.out.println(buildList(newSplitResponse));
+						if(!secondAttemptRequested) {
+							list();
+							secondAttemptRequested = true;
+						} else {
+							secondAttemptRequested = false;
+						}
+					}
+					
+				} catch (InvalidKeyException e) {
+					e.printStackTrace();
+				} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+				}
+			}
+			
 		}
 
 		/**
@@ -280,7 +349,7 @@ public class Client {
 			}
 			else if(splitResponse[1].equals("successful")) {
 				String description = "";
-				for(int i = 6; i < splitResponse.length; i++) {
+				for(int i = 6; i < splitResponse.length-1; i++) {
 					description += splitResponse[i];
 					description += " ";
 				}
@@ -290,6 +359,11 @@ public class Client {
 						+ splitResponse[3] + " "
 						+ splitResponse[4] + " "
 						+ splitResponse[5] + ".");
+			}
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
 			}
 		}
 
@@ -305,7 +379,7 @@ public class Client {
 			}
 			else if(splitResponse[1].equals("successful")) {
 				String description = "";
-				for(int i = 3; i < splitResponse.length; i++) {
+				for(int i = 3; i < splitResponse.length-1; i++) {
 					description += splitResponse[i];
 					description += " ";
 				}
@@ -314,13 +388,18 @@ public class Client {
 			}
 			else if(splitResponse[1].equals("unsuccessful")) {
 				String description = "";
-				for(int i = 4; i < splitResponse.length; i++) {
+				for(int i = 4; i < splitResponse.length-1; i++) {
 					description += splitResponse[i];
 					description += " ";
 				}
 				description.trim();
 				System.out.println("You unsuccessfully bid with " + splitResponse[2] + " on '" + description +"'."
 						+ " Current highest bid is " + splitResponse[3]);
+			}
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
 			}
 		}
 
@@ -330,13 +409,17 @@ public class Client {
 		 */
 		else if(splitResponse[0].equals("!new-bid")) {
 			String description = "";
-			for(int i = 1; i < splitResponse.length; i++) {
+			for(int i = 1; i < splitResponse.length-1; i++) {
 				description += splitResponse[i];
 				description += " ";
 			}
 			description.trim();
 			System.out.println("You have been overbid on '" + description + "'.");
-
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
+			}
 		}
 
 		/**
@@ -345,7 +428,7 @@ public class Client {
 		 */
 		else if(splitResponse[0].equals("!auction-ended")) {
 			String description = "";
-			for(int i = 3; i < splitResponse.length; i++) {
+			for(int i = 3; i < splitResponse.length-1; i++) {
 				description += splitResponse[i];
 				description += " ";
 			}
@@ -358,7 +441,23 @@ public class Client {
 				System.out.println("The auction '" + description + "' has ended. You won with "
 						+ splitResponse[2] + "!");
 			}
+			//verify Message
+			boolean	verified = verifyMessage(message, splitResponse);
+			if(!verified) {
+				requestRepetition();
+			}
 		}
+	}
+
+
+	private void requestRepetition() {
+		if(!secondAttemptRequested) {
+			tcpCommunication.send("!repeat" + " " + username);
+			secondAttemptRequested = true;
+		} else {
+			secondAttemptRequested = false;
+		}
+		
 	}
 
 	/**
@@ -494,8 +593,30 @@ public class Client {
 		} catch(IOException e) {
 			System.out.println("Error while closing Socket!");
 		}
-
-
+	}
+	public boolean verifyMessage(String message, String[] splitResponse) {
+		
+		String removeFromMessage1 = splitResponse[splitResponse.length-1];
+		String messageWithoutMAC = message.replace(removeFromMessage1, ""); 
+		messageWithoutMAC = messageWithoutMAC.trim();
+		boolean match = true;
+		try {
+			
+			// create an own hMAC
+			byte[] ownMAC = integrityManager.createHashMAC(clientSecretKey, messageWithoutMAC);
+			// read the hMAC from the message
+			byte[] decodedHMAC = Base64.decode(splitResponse[splitResponse.length-1]); 
+			
+			//compare the two hMACs
+			match = integrityManager.verifyHashMAC(ownMAC, decodedHMAC);
+			
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		
+		return match;
 	}
 
 

@@ -1,11 +1,16 @@
 package server;
 
+import integrity.IntegrityManager;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -16,6 +21,7 @@ import java.util.Scanner;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 
 import registry.RegistryReader;
 import analyticsServer.AnalyticsServerInterface;
@@ -57,6 +63,11 @@ public class Server {
 	private static AnalyticsServerInterface analyticsHandler = null;
 	private static IBillingServer loginHandler = null;
 	private static IBillingServerSecure billingHandler = null;
+	
+	private String pathToKeyDirectory;
+	private String pathToServerKey;
+	
+	private IntegrityManager integrityManager;
 
 	public static void main(String[] args) {
 		
@@ -78,10 +89,17 @@ public class Server {
 	 * @throws WrongParameterCountException
 	 */
 	public Server(String[] args) throws WrongParameterCountException{
-		if(args.length != 1) {
+		if(args.length != 5) {
 			throw new WrongParameterCountException();
 		} else {
 			this.tcpPort = Integer.parseInt(args[0]);
+			this.bindingNameAnalytics = args[1];
+			this.bindingNameBilling = args[2];
+			this.pathToServerKey = args[3];
+			this.pathToKeyDirectory = args[4];
+			
+			//load integrityManager
+			integrityManager = new IntegrityManager(pathToKeyDirectory);
 		}
 
 		System.out.println("Starting Server.");
@@ -135,6 +153,14 @@ public class Server {
 			if(!userKnown(username)){
 				User newUser = new User(username);
 				users.add(newUser);
+				
+				//add user's key to newUser
+				try {
+					newUser.setKey(integrityManager.getSecretKey(username));
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				
 				newUser.logIn();
 
 				if(analyticsHandler != null) {
@@ -144,14 +170,46 @@ public class Server {
 						e.printStackTrace();
 					}
 				}
-//				new UDPNotificationThread(inetAddress, port, "login successful" + " " + username).start();
-				responseMsg.send(("login successful" + " " + username).getBytes());
+		
+				//add hashed MAC to the message
+				
+				Key key = newUser.getKey();
+				String returnMessage =	"login successful" + " " + username;	
+				try {
+					byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+					byte[] encodedHMAC = Base64.encode(hMAC);  
+					String append = new String(encodedHMAC);
+					newUser.setLastMessage(returnMessage);
+					returnMessage += " " + append;
+				} catch (InvalidKeyException e) {
+					e.printStackTrace();
+				} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+				}	
+				
+				
+				responseMsg.send(returnMessage.getBytes());
 			}
 			else{
 				User user = findUser(username);
 				if(user.loggedIn()) {
-//					new UDPNotificationThread(inetAddress, port, "login failed").start();
-					responseMsg.send(("login failed").getBytes());
+				
+					//add hashed MAC to the message
+					Key key = user.getKey();
+					String returnMessage =	"login failed";	
+					try {
+						byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+						byte[] encodedHMAC = Base64.encode(hMAC);  
+						String append = new String(encodedHMAC);
+						user.setLastMessage(returnMessage);
+						returnMessage += " " + append;
+					} catch (InvalidKeyException e) {
+						e.printStackTrace();
+					} catch (NoSuchAlgorithmException e) {
+						e.printStackTrace();
+					}	
+					
+					responseMsg.send(returnMessage.getBytes());
 				}
 				else{
 					user.logIn();
@@ -164,12 +222,39 @@ public class Server {
 						}
 					}
 					
-//					new UDPNotificationThread(inetAddress, port, "login successful" + " " + username).start();
-					responseMsg.send(("login successful" + " " + username).getBytes());
+					//add hashed MAC to the message
+					Key key = user.getKey();
+					String returnMessage =	"login successful" + " " + username;	
+					try {
+						byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+						byte[] encodedHMAC = Base64.encode(hMAC);  
+						String append = new String(encodedHMAC);
+						user.setLastMessage(returnMessage);
+						returnMessage += " " + append;
+					} catch (InvalidKeyException e) {
+						e.printStackTrace();
+					} catch (NoSuchAlgorithmException e) {
+						e.printStackTrace();
+					}	
+					
+					responseMsg.send(returnMessage.getBytes());
 					if(user.getSavedMessages().size() > 0) {
 						for(int i = 0; i < user.getSavedMessages().size(); i++) {
-//							new UDPNotificationThread(inetAddress, port, user.getSavedMessages().get(i)).start();
-							responseMsg.send((user.getSavedMessages().get(i)).getBytes());
+							
+							//add hashed MAC to the message
+							String returnMessage2 =	user.getSavedMessages().get(i);	
+							try {
+								byte[] hMAC = integrityManager.createHashMAC(key, returnMessage2);				
+								byte[] encodedHMAC = Base64.encode(hMAC);  
+								String append = new String(encodedHMAC);
+								user.setLastMessage(returnMessage2);
+								returnMessage2 += " " + append;
+							} catch (InvalidKeyException e) {
+								e.printStackTrace();
+							} catch (NoSuchAlgorithmException e) {
+								e.printStackTrace();
+							}	
+							responseMsg.send(returnMessage2.getBytes());
 						}
 						user.clearMessages();
 					}
@@ -195,8 +280,21 @@ public class Server {
 					}
 				}
 				
-//				new UDPNotificationThread(inetAddress, port, "logout successful" + " " + username).start();
-				responseMsg.send(("logout successful" + " " + username).getBytes());
+				//add hashed MAC to the message
+				Key key = user.getKey();
+				String returnMessage =	"logout successful" + " " + username;	
+				try {
+					byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+					byte[] encodedHMAC = Base64.encode(hMAC);  
+					String append = new String(encodedHMAC);
+					user.setLastMessage(returnMessage);
+					returnMessage += " " + append;
+				} catch (InvalidKeyException e) {
+					e.printStackTrace();
+				} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+				}	
+				responseMsg.send(returnMessage.getBytes());
 			}
 		}
 
@@ -214,6 +312,7 @@ public class Server {
 				description += input[i];
 				description += " ";
 			}
+			description = description.trim();
 			Auction newAuction = createAuction(user, seconds, description);
 			String endDate = newAuction.dateToString();
 			int ID = newAuction.getID();
@@ -226,9 +325,21 @@ public class Server {
 				}
 			}
 			
-			
-//			new UDPNotificationThread(inetAddress, port, "create successful" + " " + ID + " " + endDate + " " + description).start();
-			responseMsg.send(("create successful" + " " + ID + " " + endDate + " " + description).getBytes());
+			//add hashed MAC to the message
+			Key key = user.getKey();
+			String returnMessage =	"create successful" + " " + ID + " " + endDate + " " + description;	
+			try {
+				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+				byte[] encodedHMAC = Base64.encode(hMAC);  
+				String append = new String(encodedHMAC);
+				user.setLastMessage(returnMessage);
+				returnMessage += " " + append;
+			} catch (InvalidKeyException e) {
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}	
+			responseMsg.send(returnMessage.getBytes());
 		}
 
 		/**
@@ -236,12 +347,45 @@ public class Server {
 		 * sends the following responses:
 		 * list <list>
 		 */
-		if(input[0].equals("!list")) {
+		if(input[0].equals("!list") && input.length == 1) {
 
 			String list = buildList();
+
 //			new UDPNotificationThread(returnAddress, port, "list" + " " + list).start();
 			responseMsg.send(("list " + list).getBytes());
+
+			responseTCPCommunication.send("list " + list);
 			
+		}
+		/**
+		 * creates a list and sends it to the user. The user has to be logged in to receive this version
+		 * of the message and will receive a hashed MAC at the end.
+		 * sends the following responses:
+		 * list <list> <hMAC>
+		 */
+		if(input[0].equals("!list") && input.length == 2) {
+			
+			//create a hashed MAC for the specific user
+			String username = input[1];
+			User user = findUser(username);
+			Key key = user.getKey();
+		
+			
+			String list = buildList();
+			String returnMessage = "list " + list;
+			//add hashed MAC to the message
+			try {
+				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+				byte[] encodedHMAC = Base64.encode(hMAC);  
+				String append = new String(encodedHMAC);
+				
+				returnMessage += " " + append;
+			} catch (InvalidKeyException e) {
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}	
+			responseMsg.send(returnMessage.getBytes());
 		}
 
 		/**
@@ -251,6 +395,28 @@ public class Server {
 			String username = input[1];
 			User user = findUser(username);
 			findAuctionByID(input[2]).newBid(user, Double.parseDouble(input[3]), responseMsg);
+		}
+		
+		/**
+		 * repeats a message sent to the user
+		 */
+		if(input[0].equals("!repeat")) {
+			String username = input[1];
+			User user = findUser(username);
+			//add hashed MAC to the message
+			Key key = user.getKey();
+			String returnMessage =	user.getLastMessage();	
+			try {
+				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+				byte[] encodedHMAC = Base64.encode(hMAC);  
+				String append = new String(encodedHMAC);
+				returnMessage += " " + append;
+			} catch (InvalidKeyException e) {
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}	
+			responseMsg.send(returnMessage.getBytes());
 		}
 	}
 
@@ -340,8 +506,22 @@ public class Server {
 	 * @param description
 	 */
 	public void bidUnsuccessful(User bidder, double amountBid, double amountHighestBid, String description, Channel responseMsg) {
-//		new UDPNotificationThread(inetAddress, port, "bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description).start();
-		responseMsg.send(("bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description).getBytes());
+		
+		//add hashed MAC to the message
+		Key key = bidder.getKey();
+		String returnMessage =	"bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description;	
+		try {
+			byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+			byte[] encodedHMAC = Base64.encode(hMAC);  
+			String append = new String(encodedHMAC);
+			bidder.setLastMessage(returnMessage);
+			returnMessage += " " + append;
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}	
+		responseMsg.send(returnMessage.getBytes());
 	}
 
 	/**
@@ -414,14 +594,6 @@ public class Server {
 					bidders.get(i).addMessage("!auction-ended"  + " " + winner.getUsername()  + " " + winningBid + " " + description);
 				}
 			}
-			else {
-				if(bidders.get(i).getUsername().equals(winner.getUsername())) {
-//					new UDPNotificationThread(winner.getInetAddress(), winner.getPort(), "!auction-ended" + " " + "You"  + " " + winningBid  + " " + description).start();
-				}
-				else {
-//					new UDPNotificationThread(bidders.get(i).getInetAddress(), bidders.get(i).getPort(), "!auction-ended"  + " " + winner.getUsername()  + " " + winningBid + " " + description).start();
-				}
-			}
 		}
 	}
 
@@ -453,6 +625,7 @@ public class Server {
 			list += ID + ". " + "'" + description + "'" + " " + owner + " " + endDate + " " + highestBid + " " + highestBidderName;
 			list += " -|- ";
 		}
+		list = list.trim();
 		return list;
 	}
 
@@ -463,6 +636,7 @@ public class Server {
 	 * @param description
 	 */
 	public void bidSuccessful(User bidder, double amount, String description, int auctionID, Channel responseMsg) {
+
 		if(analyticsHandler != null) {
 			try {
 				analyticsHandler.processEvent(new BidEvent("BID_PLACED",bidder.getUsername(), (long) auctionID, amount));
@@ -470,9 +644,21 @@ public class Server {
 				e.printStackTrace();
 			}
 		}
-		
-//		new UDPNotificationThread(inetAddress, port, "bid" + " " + "successful" + " " + amount + " "  + description).start();
-		responseMsg.send(("bid" + " " + "successful" + " " + amount + " "  + description).getBytes());
+
+		Key key = bidder.getKey();
+		String returnMessage =	"bid" + " " + "successful" + " " + amount + " "  + description;	
+		try {
+			byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+			byte[] encodedHMAC = Base64.encode(hMAC);  
+			String append = new String(encodedHMAC);
+			bidder.setLastMessage(returnMessage);
+			returnMessage += " " + append;
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}	
+		responseMsg.send(returnMessage.getBytes());
 	}
 
 	/**
@@ -481,6 +667,7 @@ public class Server {
 	 * @param description
 	 */
 	public void userOverbid(User bidder, double amount, String description, int auctionID, Channel responseMsg) {
+
 		if(analyticsHandler != null) {
 			try {
 				analyticsHandler.processEvent(new BidEvent("BID_OVERBID",bidder.getUsername(), (long) auctionID, amount));
@@ -493,9 +680,20 @@ public class Server {
 			bidder.addMessage("!new-bid" + description);
 		}
 		else {
-//			new UDPNotificationThread(inetAddress, port, "!new-bid" + " " + description).start();
-			responseMsg.send(("bid" + " " + "successful" + " " + amount + " "  + description).getBytes());
-
+			Key key = bidder.getKey();
+			String returnMessage =	"bid" + " " + "successful" + " " + amount + " "  + description;	
+			try {
+				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+				byte[] encodedHMAC = Base64.encode(hMAC);  
+				String append = new String(encodedHMAC);
+				bidder.setLastMessage(returnMessage);
+				returnMessage += " " + append;
+			} catch (InvalidKeyException e) {
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}	
+			responseMsg.send(returnMessage.getBytes());
 		}
 	}
 	

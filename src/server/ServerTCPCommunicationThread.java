@@ -3,7 +3,6 @@ package server;
 import java.io.IOException;
 import java.net.Socket;
 
-import security.KeyReader;
 import security.KeyReader.KeyOwner;
 
 import communication.Base64Channel;
@@ -31,7 +30,7 @@ public class ServerTCPCommunicationThread extends Thread {
 	
 	public void run() {
 		try {
-			this.channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)), KeyReader.getPublicKey(KeyOwner.ALICE));
+			this.channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)), server.getPublicKey(KeyOwner.ALICE));
 		} catch(IOException e) {
 			exit();
 			return;

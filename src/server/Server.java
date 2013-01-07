@@ -24,6 +24,8 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import registry.RegistryReader;
+import security.KeyReader;
+import security.KeyReader.KeyOwner;
 import analyticsServer.AnalyticsServerInterface;
 import analyticsServer.AuctionEvent;
 import analyticsServer.BidEvent;
@@ -756,5 +758,10 @@ public class Server {
 		int randomNumber = randomGenerator.nextInt(amount);
 		Auction randomAuction = auctions.get(randomNumber);
 		return randomAuction;
+	}
+
+	public Key getPublicKey(KeyOwner owner) throws IOException {
+		KeyReader keyReader = new KeyReader(pathToKeyDirectory);
+		return keyReader.getPublicKey(KeyOwner.ALICE);
 	}
 }

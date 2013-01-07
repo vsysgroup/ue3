@@ -52,6 +52,7 @@ public class Client {
 	private Key clientSecretKey;
 	
 	private Boolean secondAttemptRequested = false;
+	private KeyReader keyReader;
 
 	public static void main(String[] args) {
 
@@ -90,6 +91,9 @@ public class Client {
 			}
 			
 		}
+		
+		//key reader for reading out private and public keys
+		keyReader = new KeyReader(pathToPublicServerKey, pathToKeyDirectory);
 
 		clientStatus = true;
 
@@ -223,7 +227,7 @@ public class Client {
 			System.out.println("Connection to Server could not be established - IOException");
 		}
 		try {
-			channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)), KeyReader.getPublicKey(KeyOwner.SERVER));
+			channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)), keyReader.getPublicKey(KeyOwner.SERVER));
 		} catch (IOException e) {
 			System.out.println("Communications with Server could not be established - IOException");
 		}

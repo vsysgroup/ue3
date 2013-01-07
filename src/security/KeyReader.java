@@ -14,15 +14,26 @@ import org.bouncycastle.openssl.PasswordFinder;
 
 public class KeyReader {
 
-	public enum KeyOwner {SERVER, ALICE};
+	public enum KeyOwner {SERVER, ALICE}
 
-	public static Key getPublicKey(KeyOwner owner) throws IOException {
-		//public key
+	private String pathToServerPublicKey = null;
+	private String pathToKeyDirectory;
+
+	public KeyReader(String pathToKeyDirectory) {
+		this.pathToKeyDirectory = pathToKeyDirectory;
+	}
+	
+	public KeyReader(String pathToServerPublicKey, String pathToKeyDirectory) {
+		this.pathToServerPublicKey = pathToServerPublicKey;
+		this.pathToKeyDirectory = pathToKeyDirectory;
+	}
+	
+	public Key getPublicKey(KeyOwner owner) throws IOException {
 		String pathToPublicKey = "";
 		switch(owner) {
-			case ALICE: pathToPublicKey = "alice.pub.pem";
+			case ALICE: pathToPublicKey = "keys/" + "alice.pub.pem";
 				break;
-			case SERVER: pathToPublicKey = "auction-server.pub.pem";
+			case SERVER: pathToPublicKey = pathToServerPublicKey;
 				break;
 		}
 
@@ -32,16 +43,16 @@ public class KeyReader {
 	}
 
 	public Key getPrivateKey(KeyOwner owner) throws IOException {
-		String pathToPrivateKey = "auction-server.pem";
+		String pathToPrivateKey = "";
 		switch(owner) {
-			case ALICE: pathToPrivateKey = "alice.pem";
+			case ALICE: pathToPrivateKey = pathToKeyDirectory + "alice.pem";
 				break;
-			case SERVER: pathToPrivateKey = "auction-server.pem";
+			case SERVER: pathToPrivateKey = pathToKeyDirectory + "auction-server.pem";
 				break;
 		}
 		
 		PEMReader in = new PEMReader(new FileReader(pathToPrivateKey), new PasswordFinder() {
-
+			//passphrase for all private keys: 12345
 			@Override
 			public char[] getPassword() {
 				char[] password = null;

@@ -1,17 +1,16 @@
 package integrity;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import javax.crypto.Mac; 
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey; 
+
+import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+
 import org.bouncycastle.util.encoders.Hex;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 
 /**
  * This class represents the Integrity Manager. It is used to read Secret Keys from the directory, to create hashed MACs and to verify them.

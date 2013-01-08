@@ -764,4 +764,8 @@ public class Server {
 		KeyReader keyReader = new KeyReader(pathToKeyDirectory);
 		return keyReader.getPublicKey(KeyOwner.ALICE);
 	}
+
+	public ArrayList<User> getUsers() {
+		return users;
+	}
 }

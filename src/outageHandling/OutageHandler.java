@@ -12,6 +12,7 @@ public class OutageHandler {
 	private Client client;
 	private Server server;
 	private String clients;
+	private ArrayList<outageUser> clientList = new ArrayList<outageUser>();
 	
 	public OutageHandler(Client client) {
 		this.client = client;
@@ -23,6 +24,8 @@ public class OutageHandler {
 	
 	public String buildClientListClientSide(String[] splitString) {
 		String output = "";
+		
+		//TODO: Add each outageUser to clientList
 		
 		for(int i = 1; i<splitString.length; i++){
 			if(splitString[i].equals("-|-")) {
@@ -57,5 +60,17 @@ public class OutageHandler {
 	
 	public String getClients() {
 		return clients;
+	}
+
+	public ArrayList<outageUser> getClientList() {
+		return clientList;
+	}
+
+	public void setClientList(ArrayList<outageUser> clientList) {
+		this.clientList = clientList;
+	}
+	
+	public long getTimeStamp() {
+		return System.currentTimeMillis();
 	}
 }

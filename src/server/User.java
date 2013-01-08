@@ -16,6 +16,8 @@ public class User {
 	private ArrayList<String> savedMessages = new ArrayList<String>();
 	private Key secretKey;
 	private String lastMessage;
+	private String address;
+	private int port;
 	
 	public User(String username) {
 		this.username = username;
@@ -69,6 +71,22 @@ public class User {
 	
 	public String getLastMessage() {
 		return lastMessage;
+	}
+	
+	public void setAddress(InetAddress inetAddress) {
+		this.address = inetAddress.toString();
+	}
+	
+	public String getAddress() {
+		return address;
+	}
+	
+	public void setPort(int port) {
+		this.port = port;
+	}
+	
+	public int getPort() {
+		return port;
 	}
 
 }

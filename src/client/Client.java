@@ -667,8 +667,13 @@ public class Client {
 		return username;
 	}
 
+	/**
+	 * 
+	 * @return null if client is not known yet, private key otherwise
+	 * @throws IOException
+	 */
 	public Key getOwnPrivateKey() throws IOException {
-		return keyReader.getPrivateKeyClient(username);
+		return clientPrivateKey;
 	}
 
 	public void startOutageMode() {

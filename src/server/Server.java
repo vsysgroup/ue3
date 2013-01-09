@@ -75,6 +75,8 @@ public class Server {
 	private KeyReader keyReader;
 	private String iv = null;
 	private String secretKey = null;
+	private String serverChallenge = null;
+	private boolean secureChannelEstablished = false;
 
 	public static void main(String[] args) {
 		
@@ -157,6 +159,13 @@ public class Server {
 	public void receiveMessage(String message, Channel responseMsg) {
 		String[] input = message.split(" ");
 		
+		if ((serverChallenge != null) && (!secureChannelEstablished)) {
+			if (input[0].equals(serverChallenge)) {
+				secureChannelEstablished = true;
+				serverChallenge = null;
+			}
+		}
+			
 		/**
 		 * logs the user in
 		 * sends the following responses:
@@ -169,7 +178,7 @@ public class Server {
 			int tcpPort = Integer.parseInt(input[2]);
 			String clientChallenge = input[3];
 
-			if(!userKnown(username)){
+			if(!userKnown(username)) { // user not known
 				User newUser = new User(username);
 				newUser.setPort(tcpPort);
 				try {
@@ -179,7 +188,10 @@ public class Server {
 					// TODO Auto-generated catch block
 					e2.printStackTrace();
 				}
+				
+				// -------------------- login code -------------------
 				users.add(newUser);
+				newUser.logIn();
 				
 				//add user's key to newUser
 				try {
@@ -187,9 +199,6 @@ public class Server {
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
-				
-				newUser.logIn();
-
 				if(analyticsHandler != null) {
 					try {
 						analyticsHandler.processEvent(new UserEvent("USER_LOGIN", newUser.getUsername()));
@@ -197,9 +206,9 @@ public class Server {
 						e.printStackTrace();
 					}
 				}
+				// -------------------- login code -------------------
 				
-				// generates a 32 byte secure random number => server-challenge
-				String serverChallenge = MyRandomGenerator.createChallenge();
+				serverChallenge = MyRandomGenerator.createChallenge();
 				iv = MyRandomGenerator.createIV();
 				try {
 					secretKey = MyRandomGenerator.createSecretKey();
@@ -226,10 +235,13 @@ public class Server {
 				}	
 				
 				responseMsg.send(returnMessage.getBytes());
-			}
-			else{
+				((RSAChannel) responseMsg).setDecryptKeyAES(MyRandomGenerator.convertSecretKey(secretKey), MyRandomGenerator.convertIV(iv));
+				((RSAChannel) responseMsg).setEncryptKeyAES(MyRandomGenerator.convertSecretKey(secretKey), MyRandomGenerator.convertIV(iv));
+			} // end: if "user not known"
+			
+			else{ // user is known
 				User user = findUser(username);
-				if(user.loggedIn()) {
+				if(user.loggedIn()) { // user is already logged in and tries to log in again
 				
 					//add hashed MAC to the message
 					Key key = user.getKey();
@@ -248,7 +260,7 @@ public class Server {
 					
 					responseMsg.send(returnMessage.getBytes());
 				}
-				else{
+				else{ // user is known and logs in again
 					user.logIn();
 					
 					if(analyticsHandler != null) {
@@ -297,7 +309,7 @@ public class Server {
 					}
 				}
 			}
-		}
+		} // end: if "login"
 
 		/**
 		 * logs the user out

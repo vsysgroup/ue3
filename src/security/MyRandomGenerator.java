@@ -8,7 +8,6 @@ import java.security.spec.InvalidKeySpecException;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -52,18 +51,7 @@ public class MyRandomGenerator {
 
 	public static Key convertSecretKey(String secretKey) {
 		byte[] key = MyBase64.decode(secretKey);
-		SecretKey finalSecretKey = null;
-		SecretKeySpec keySpec = new SecretKeySpec(key, 0, key.length, "AES");
-		try {
-			SecretKeyFactory keyFac = SecretKeyFactory.getInstance("AES");
-			finalSecretKey = keyFac.generateSecret(keySpec);
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidKeySpecException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		SecretKey finalSecretKey = new SecretKeySpec(key, 0, key.length, "AES");
 		return finalSecretKey;
 	}
 

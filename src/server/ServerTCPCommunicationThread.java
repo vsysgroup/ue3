@@ -18,28 +18,23 @@ import communication.TCPChannel;
  *
  */
 public class ServerTCPCommunicationThread extends Thread {
-	
+
 	private Socket clientSocket = null;
 	private Server server;
 	private Channel channel = null;
 	private Key serverPrivateKey;
-	
+
 	public ServerTCPCommunicationThread(Socket socket, Server server, Key serverPrivateKey) {
 		this.clientSocket = socket;
 		this.server = server;
 		this.serverPrivateKey = serverPrivateKey;
 	}
-	
+
 	public void run() {
 		try {
 			this.channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)));
-			if(server.getSecretKeyAndIV() == null) {
-				((RSAChannel) this.channel).setDecryptKey(serverPrivateKey);
-			} else {
-				String secretKey = server.getSecretKeyAndIV()[0];
-				String iv = server.getSecretKeyAndIV()[1];
-				((RSAChannel) channel).setDecryptKeyAES(MyRandomGenerator.convertSecretKey(secretKey), MyRandomGenerator.convertIV(iv));
-			}
+			((RSAChannel) this.channel).setDecryptKey(serverPrivateKey);
+
 		} catch(IOException e) {
 			exit();
 			return;
@@ -59,7 +54,7 @@ public class ServerTCPCommunicationThread extends Thread {
 		}
 		//TODO perhaps send disconnect event from here
 	}
-	
+
 
 	public void exit() {
 		interrupt();

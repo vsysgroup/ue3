@@ -271,6 +271,7 @@ public class Client {
 			} else {
 				// initialize AES channel
 				((RSAChannel) channel).setEncryptKeyAES(secretKey, iv);
+				((RSAChannel) channel).setDecryptKeyAES(secretKey, iv);
 				// return server challenge
 				channel.send(serverChallenge);
 			}

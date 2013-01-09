@@ -71,7 +71,7 @@ public class OutageHandler {
 			String username = currentUser.getUsername();
 			String address = currentUser.getAddress();
 			int port = currentUser.getPort();
-			boolean loggedIn = currentUser.loggedIn();
+			boolean loggedIn = currentUser.isLoggedIn();
 			
 			clientList += username + " " + address + " " + port + " " + loggedIn;
 			clientList += " -|- ";

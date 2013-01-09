@@ -47,13 +47,13 @@ import exception.WrongParameterCountException;
  *
  */
 public class Server {
-	
-	
-	
+
+
+
 	public static final Logger LOG = Logger.getLogger(Server.class);
 	private static String bindingNameAnalytics;
 	private static String bindingNameBilling;
-	
+
 	public static String currentAuctionList = "";
 
 	private int tcpPort;
@@ -68,22 +68,25 @@ public class Server {
 	private static AnalyticsServerInterface analyticsHandler = null;
 	private static IBillingServer loginHandler = null;
 	private static IBillingServerSecure billingHandler = null;
-	
+
 	private String pathToKeyDirectory;
 	private String pathToServerKey;
-	
+
 	private IntegrityManager integrityManager;
 	private Key serverPrivateKey;
 	private KeyReader keyReader;
-	private String iv = null;
-	private String secretKey = null;
-	private String serverChallenge = null;
-	private boolean secureChannelEstablished = false;
-	
+
+
+
+
+
+
+
+
 	private OutageHandler outageHandler;
 
 	public static void main(String[] args) {
-		
+
 		//init Logger
 		BasicConfigurator.configure();
 
@@ -110,13 +113,13 @@ public class Server {
 			this.bindingNameBilling = args[2];
 			this.pathToServerKey = args[3];
 			this.pathToKeyDirectory = args[4];
-			
+
 			//load integrityManager
 			integrityManager = new IntegrityManager(pathToKeyDirectory);
-			
+
 			//load outageHandler
 			outageHandler = new OutageHandler(this);
-			
+
 			keyReader = new KeyReader(pathToKeyDirectory);
 			try {
 				serverPrivateKey = keyReader.getPrivateKeyServer(pathToServerKey);
@@ -142,7 +145,7 @@ public class Server {
 		serverTCPListenerThread.start();
 		auctionCheckThread = new AuctionCheckThread(this);
 		auctionCheckThread.start();
-		
+
 		lookupRMI();
 
 		while(serverStatus) {
@@ -152,7 +155,7 @@ public class Server {
 			}
 		}
 	}
-	
+
 	public Key getClientPublicKey(String username) throws IOException {
 		return keyReader.getPublicKeyClient(username);
 	}
@@ -160,18 +163,69 @@ public class Server {
 	/**
 	 * Receives a message and a socket and processes the message
 	 * @param message
-	 * @param responseMsg
+	 * @param channel
 	 */
-	public void receiveMessage(String message, Channel responseMsg) {
+	public void receiveMessage(String message, Channel channel, ServerTCPCommunicationThread commSession) {
 		String[] input = message.split(" ");
-		
-		if ((serverChallenge != null) && (!secureChannelEstablished)) {
-			if (input[0].equals(serverChallenge)) {
-				secureChannelEstablished = true;
-				serverChallenge = null;
+
+		// only login the user if the response on the server challenge was correct
+		if ((commSession.getCurrentUser() != null) && (commSession.getCurrentUser().getServerChallenge() != null)) {				
+			if (input[0].equals(commSession.getCurrentUser().getServerChallenge())) {
+				commSession.getCurrentUser().logIn();
+				commSession.getCurrentUser().setServerChallenge(null);	
+				String returnMessage = "login successful" + " " + commSession.getCurrentUser().getUsername();
+
+
+				if(analyticsHandler != null) {
+					try {
+						analyticsHandler.processEvent(new UserEvent("USER_LOGIN", commSession.getCurrentUser().getUsername()));
+					} catch (RemoteException e) {
+						e.printStackTrace();
+					}
+				}
+				Key key = commSession.getCurrentUser().getKey();
+				try {
+					//add hashed MAC to the message
+					byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+					byte[] encodedHMAC = Base64.encode(hMAC);  
+					String append = new String(encodedHMAC);
+					commSession.getCurrentUser().setLastMessage(returnMessage);
+					returnMessage += " " + append;
+				} catch (InvalidKeyException e) {
+					e.printStackTrace();
+				} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+				}	
+
+				channel.send(returnMessage.getBytes());				
+
+				if(commSession.getCurrentUser().getSavedMessages().size() > 0) {
+					for(int i = 0; i < commSession.getCurrentUser().getSavedMessages().size(); i++) {
+
+						//add hashed MAC to the message
+						String returnMessage2 =	commSession.getCurrentUser().getSavedMessages().get(i);	
+						try {
+							byte[] hMAC = integrityManager.createHashMAC(key, returnMessage2);				
+							byte[] encodedHMAC = Base64.encode(hMAC);  
+							String append = new String(encodedHMAC);
+							commSession.getCurrentUser().setLastMessage(returnMessage2);
+							returnMessage2 += " " + append;
+						} catch (InvalidKeyException e) {
+							e.printStackTrace();
+						} catch (NoSuchAlgorithmException e) {
+							e.printStackTrace();
+						}	
+						channel.send(returnMessage2.getBytes());
+					}
+					commSession.getCurrentUser().clearMessages();
+				}
+
+
+			} else {
+				// todo: stop everything - challenge response is wrong
 			}
 		}
-			
+
 		/**
 		 * logs the user in
 		 * sends the following responses:
@@ -179,142 +233,76 @@ public class Server {
 		 * login failed
 		 */
 		if(input[0].equals("!login")) {
-//			incoming msg: "!login <username> <tcpPort> <client-challenge>"
+			//			incoming msg: "!login <username> <tcpPort> <client-challenge>"
 			String username = input[1];
 			int tcpPort = Integer.parseInt(input[2]);
 			String clientChallenge = input[3];
 
-			if(!userKnown(username)) { // user not known
-				User newUser = new User(username);
-				newUser.setPort(tcpPort);
+			User currentUser = null;
+
+			if(!userKnown(username)) { // new user
+				currentUser = new User(username);
+				currentUser.setPort(tcpPort);	
 				try {
-					Key clientPublicKey = getClientPublicKey(username);
-					((RSAChannel) responseMsg).setEncryptKey(clientPublicKey);
-				} catch (IOException e2) {
-					// TODO Auto-generated catch block
-					e2.printStackTrace();
-				}
-				
-				// -------------------- login code -------------------
-				users.add(newUser);
-				newUser.logIn();
-				
-				//add user's key to newUser
-				try {
-					newUser.setKey(integrityManager.getSecretKey(username));
+					currentUser.setKey(integrityManager.getSecretKey(username));
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
-				if(analyticsHandler != null) {
-					try {
-						analyticsHandler.processEvent(new UserEvent("USER_LOGIN", newUser.getUsername()));
-					} catch (RemoteException e) {
-						e.printStackTrace();
-					}
-				}
-				// -------------------- login code -------------------
+				users.add(currentUser);
 				
-				serverChallenge = MyRandomGenerator.createChallenge();
-				iv = MyRandomGenerator.createIV();
-				try {
-					secretKey = MyRandomGenerator.createSecretKey();
-				} catch (NoSuchAlgorithmException e1) {
-					LOG.error("creating secret key failed");
-					e1.printStackTrace();
-				}
-				
-//				String returnMessage =	"login successful" + " " + username;
-				String returnMessage = "!ok " + clientChallenge + " " + serverChallenge + " " + secretKey + " " + iv;
-				
-				Key key = newUser.getKey();
-				try {
+			} else { // existing user
+				currentUser = findUser(username);
+
+				if (currentUser.isLoggedIn()) { // Error: User is already logged in
 					//add hashed MAC to the message
-					byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
-					byte[] encodedHMAC = Base64.encode(hMAC);  
-					String append = new String(encodedHMAC);
-					newUser.setLastMessage(returnMessage);
-					returnMessage += " " + append;
-				} catch (InvalidKeyException e) {
-					e.printStackTrace();
-				} catch (NoSuchAlgorithmException e) {
-					e.printStackTrace();
-				}	
-				
-				responseMsg.send(returnMessage.getBytes());
-				((RSAChannel) responseMsg).setDecryptKeyAES(MyRandomGenerator.convertSecretKey(secretKey), MyRandomGenerator.convertIV(iv));
-				((RSAChannel) responseMsg).setEncryptKeyAES(MyRandomGenerator.convertSecretKey(secretKey), MyRandomGenerator.convertIV(iv));
-			} // end: if "user not known"
-			
-			else{ // user is known
-				User user = findUser(username);
-				if(user.loggedIn()) { // user is already logged in and tries to log in again
-				
-					//add hashed MAC to the message
-					Key key = user.getKey();
+					Key key = currentUser.getKey();
 					String returnMessage =	"login failed";	
 					try {
-						byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
-						byte[] encodedHMAC = Base64.encode(hMAC);  
+						byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);	
+						byte[] encodedHMAC = Base64.encode(hMAC);
 						String append = new String(encodedHMAC);
-						user.setLastMessage(returnMessage);
+						currentUser.setLastMessage(returnMessage);
 						returnMessage += " " + append;
 					} catch (InvalidKeyException e) {
 						e.printStackTrace();
 					} catch (NoSuchAlgorithmException e) {
 						e.printStackTrace();
-					}	
-					
-					responseMsg.send(returnMessage.getBytes());
-				}
-				else{ // user is known and logs in again
-					user.logIn();
-					
-					if(analyticsHandler != null) {
-						try {
-							analyticsHandler.processEvent(new UserEvent("USER_LOGIN", user.getUsername()));
-						} catch (RemoteException e) {
-							e.printStackTrace();
-						}
 					}
-					
-					//add hashed MAC to the message
-					Key key = user.getKey();
-					String returnMessage =	"login successful" + " " + username;	
-					try {
-						byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
-						byte[] encodedHMAC = Base64.encode(hMAC);  
-						String append = new String(encodedHMAC);
-						user.setLastMessage(returnMessage);
-						returnMessage += " " + append;
-					} catch (InvalidKeyException e) {
-						e.printStackTrace();
-					} catch (NoSuchAlgorithmException e) {
-						e.printStackTrace();
-					}	
-					
-					responseMsg.send(returnMessage.getBytes());
-					if(user.getSavedMessages().size() > 0) {
-						for(int i = 0; i < user.getSavedMessages().size(); i++) {
-							
-							//add hashed MAC to the message
-							String returnMessage2 =	user.getSavedMessages().get(i);	
-							try {
-								byte[] hMAC = integrityManager.createHashMAC(key, returnMessage2);				
-								byte[] encodedHMAC = Base64.encode(hMAC);  
-								String append = new String(encodedHMAC);
-								user.setLastMessage(returnMessage2);
-								returnMessage2 += " " + append;
-							} catch (InvalidKeyException e) {
-								e.printStackTrace();
-							} catch (NoSuchAlgorithmException e) {
-								e.printStackTrace();
-							}	
-							responseMsg.send(returnMessage2.getBytes());
-						}
-						user.clearMessages();
-					}
-				}
+
+					channel.send(returnMessage.getBytes()); // send login failed
+					return;
+				}			
 			}
+
+			// send the challenge to the user the user that tries to log-in
+
+			commSession.setCurrentUser(currentUser);
+
+			try {
+				Key clientPublicKey = getClientPublicKey(username);
+				((RSAChannel) channel).setEncryptKey(clientPublicKey);
+			} catch (IOException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			}	
+
+			currentUser.setServerChallenge(MyRandomGenerator.createChallenge());
+			String iv = MyRandomGenerator.createIV();
+			String secretKey = "";
+			try {
+				secretKey = MyRandomGenerator.createSecretKey();
+			} catch (NoSuchAlgorithmException e1) {
+				LOG.error("creating secret key failed");
+				e1.printStackTrace();
+			}
+
+			String returnMessage = "!ok " + clientChallenge + " " + currentUser.getServerChallenge() + " " + secretKey + " " + iv;		
+
+			channel.send(returnMessage.getBytes());
+			((RSAChannel) channel).setDecryptKeyAES(MyRandomGenerator.convertSecretKey(secretKey), MyRandomGenerator.convertIV(iv));
+			((RSAChannel) channel).setEncryptKeyAES(MyRandomGenerator.convertSecretKey(secretKey), MyRandomGenerator.convertIV(iv));
+
+
 		} // end: if "login"
 
 		/**
@@ -325,8 +313,9 @@ public class Server {
 		if(input[0].equals("!logout")) {
 			String username = input[1];
 			User user = findUser(username);
-			if(user.loggedIn()) {
+			if(user.isLoggedIn()) {
 				user.logOut();
+				commSession.setCurrentUser(null);
 				if(analyticsHandler != null) {
 					try {
 						analyticsHandler.processEvent(new UserEvent("USER_LOGOUT", user.getUsername()));
@@ -334,7 +323,7 @@ public class Server {
 						e.printStackTrace();
 					}
 				}
-				
+
 				//add hashed MAC to the message
 				Key key = user.getKey();
 				String returnMessage =	"logout successful" + " " + username;	
@@ -349,7 +338,7 @@ public class Server {
 				} catch (NoSuchAlgorithmException e) {
 					e.printStackTrace();
 				}	
-				responseMsg.send(returnMessage.getBytes());
+				channel.send(returnMessage.getBytes());
 			}
 		}
 
@@ -371,7 +360,7 @@ public class Server {
 			Auction newAuction = createAuction(user, seconds, description);
 			String endDate = newAuction.dateToString();
 			int ID = newAuction.getID();
-			
+
 			if(analyticsHandler != null) {
 				try {
 					analyticsHandler.processEvent(new AuctionEvent("AUCTION_STARTED", (long) ID));
@@ -379,7 +368,7 @@ public class Server {
 					e.printStackTrace();
 				}
 			}
-			
+
 			//add hashed MAC to the message
 			Key key = user.getKey();
 			String returnMessage =	"create successful" + " " + ID + " " + endDate + " " + description;	
@@ -394,7 +383,7 @@ public class Server {
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			}	
-			responseMsg.send(returnMessage.getBytes());
+			channel.send(returnMessage.getBytes());
 		}
 
 		/**
@@ -406,11 +395,11 @@ public class Server {
 
 			String list = buildList();
 
-//			new UDPNotificationThread(returnAddress, port, "list" + " " + list).start();
-			responseMsg.send(("list " + list).getBytes());
+			//			new UDPNotificationThread(returnAddress, port, "list" + " " + list).start();
+			channel.send(("list " + list).getBytes());
 
-			responseMsg.send(("list " + list).getBytes());
-			
+			channel.send(("list " + list).getBytes());
+
 		}
 		/**
 		 * creates a list and sends it to the user. The user has to be logged in to receive this version
@@ -419,13 +408,13 @@ public class Server {
 		 * list <list> <hMAC>
 		 */
 		if(input[0].equals("!list") && input.length == 2) {
-			
+
 			//create a hashed MAC for the specific user
 			String username = input[1];
 			User user = findUser(username);
 			Key key = user.getKey();
-		
-			
+
+
 			String list = buildList();
 			String returnMessage = "list " + list;
 			//add hashed MAC to the message
@@ -433,14 +422,14 @@ public class Server {
 				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
 				byte[] encodedHMAC = Base64.encode(hMAC);  
 				String append = new String(encodedHMAC);
-				
+
 				returnMessage += " " + append;
 			} catch (InvalidKeyException e) {
 				e.printStackTrace();
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			}	
-			responseMsg.send(returnMessage.getBytes());
+			channel.send(returnMessage.getBytes());
 		}
 
 		/**
@@ -449,9 +438,9 @@ public class Server {
 		if(input[0].equals("!bid")) {
 			String username = input[1];
 			User user = findUser(username);
-			findAuctionByID(input[2]).newBid(user, Double.parseDouble(input[3]), responseMsg);
+			findAuctionByID(input[2]).newBid(user, Double.parseDouble(input[3]), channel);
 		}
-		
+
 		/**
 		 * repeats a message sent to the user
 		 */
@@ -471,9 +460,9 @@ public class Server {
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			}	
-			responseMsg.send(returnMessage.getBytes());
+			channel.send(returnMessage.getBytes());
 		}
-		
+
 		/**
 		 * Sends the requested list of clients to the user
 		 */
@@ -493,19 +482,8 @@ public class Server {
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			}	
-			responseMsg.send(returnMessage.getBytes());
+			channel.send(returnMessage.getBytes());
 		}
-	}
-	
-	/**
-	 * 
-	 * @return null if key and iv not yet initialized; [key, iv] otherwise
-	 */
-	public String[] getSecretKeyAndIV() {
-		if(secretKey == null || iv == null) {
-			return null;
-		}
-		return new String[] {secretKey, iv};
 	}
 
 	/**
@@ -595,7 +573,7 @@ public class Server {
 	 * @param description
 	 */
 	public void bidUnsuccessful(User bidder, double amountBid, double amountHighestBid, String description, Channel responseMsg) {
-		
+
 		//add hashed MAC to the message
 		Key key = bidder.getKey();
 		String returnMessage =	"bid" + " " + "unsuccessful" + " " + amountBid + " " + amountHighestBid + " " + description;	
@@ -646,7 +624,7 @@ public class Server {
 		User winner = currentAuction.getWinner();
 		double winningBid = currentAuction.getWinningBid();
 		String description = currentAuction.getDescription();
-		
+
 		try {
 			if(analyticsHandler != null) {
 				analyticsHandler.processEvent(new AuctionEvent("AUCTION_ENDED", (long) currentAuction.getID()));
@@ -660,7 +638,7 @@ public class Server {
 					LOG.error("Login to AuctionServer with user " + currentAuction.getOwner().getUsername() + " failed.");
 				}
 			}
-			
+
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
@@ -673,9 +651,9 @@ public class Server {
 				e.printStackTrace();
 			}
 		}
-		
+
 		for(int i = 0; i < bidders.size(); i++) {
-			if(!bidders.get(i).loggedIn()) {
+			if(!bidders.get(i).isLoggedIn()) {
 				if(bidders.get(i).getUsername().equals(winner.getUsername())) {
 					bidders.get(i).addMessage("!auction-ended" + " " + "You"  + " " + winningBid  + " " + description);
 				}
@@ -764,8 +742,8 @@ public class Server {
 				e.printStackTrace();
 			}
 		}
-		
-		if(!bidder.loggedIn()) {
+
+		if(!bidder.isLoggedIn()) {
 			bidder.addMessage("!new-bid" + description);
 		}
 		else {
@@ -785,7 +763,7 @@ public class Server {
 			responseMsg.send(returnMessage.getBytes());
 		}
 	}
-	
+
 	private static void lookupRMI() {
 		RegistryReader registryLocation = new RegistryReader();
 		try {
@@ -806,7 +784,7 @@ public class Server {
 			LOG.info("problem occurred trying to get registry");
 		}
 	}
-	
+
 	public static String getList() {
 		String list = "";
 
@@ -834,7 +812,7 @@ public class Server {
 		}
 		return list;
 	}
-	
+
 	public static Auction getRandomAuction() {
 		if(auctions.size() == 0) {
 			return null;

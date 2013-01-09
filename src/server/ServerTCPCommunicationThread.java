@@ -23,6 +23,7 @@ public class ServerTCPCommunicationThread extends Thread {
 	private Server server;
 	private Channel channel = null;
 	private Key serverPrivateKey;
+	private User currentUser = null;
 
 	public ServerTCPCommunicationThread(Socket socket, Server server, Key serverPrivateKey) {
 		this.clientSocket = socket;
@@ -47,7 +48,7 @@ public class ServerTCPCommunicationThread extends Thread {
 					exit();
 					break;
 				}
-				server.receiveMessage(receivedMessage, channel);
+				server.receiveMessage(receivedMessage, channel, this);
 			} catch (IOException e) {
 				exit();
 			}
@@ -61,6 +62,14 @@ public class ServerTCPCommunicationThread extends Thread {
 		try {
 			clientSocket.close();
 		} catch (Exception e) {}
+	}
+
+	public User getCurrentUser() {
+		return currentUser;
+	}
+
+	public void setCurrentUser(User currentUser) {
+		this.currentUser = currentUser;
 	}
 
 }

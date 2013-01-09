@@ -264,7 +264,7 @@ public class Client {
 		if(splitResponse[0].equals("!ok")) {
 			//syntax: !ok <client-challenge> <server-challenge> <secret-key> <iv-parameter>
 			String responseChallenge = splitResponse[1];
-			byte[] serverChallenge = Base64.encode(splitResponse[2].getBytes());
+			String serverChallenge = splitResponse[2];
 			Key secretKey = MyRandomGenerator.convertSecretKey(splitResponse[3]);
 			AlgorithmParameterSpec iv = MyRandomGenerator.convertIV(splitResponse[4]);
 			
@@ -277,7 +277,7 @@ public class Client {
 				((RSAChannel) channel).setEncryptKeyAES(secretKey, iv);
 				((RSAChannel) channel).setDecryptKeyAES(secretKey, iv);
 				// return server challenge
-				channel.send(serverChallenge);
+				channel.send(serverChallenge.getBytes());
 			}
 		}
 

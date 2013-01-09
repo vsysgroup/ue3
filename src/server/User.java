@@ -19,6 +19,8 @@ public class User {
 	private String address;
 	private int port;
 	
+	private String serverChallenge = null;
+	
 	public User(String username) {
 		this.username = username;
 	}
@@ -31,7 +33,7 @@ public class User {
 		loggedIn = false;
 	}
 	
-	public boolean loggedIn() {
+	public boolean isLoggedIn() {
 		return loggedIn;
 	}
 	
@@ -87,6 +89,14 @@ public class User {
 	
 	public int getPort() {
 		return port;
+	}
+
+	public String getServerChallenge() {
+		return serverChallenge;
+	}
+
+	public void setServerChallenge(String serverChallenge) {
+		this.serverChallenge = serverChallenge;
 	}
 
 }

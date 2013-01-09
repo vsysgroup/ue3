@@ -31,6 +31,7 @@ public class ClientTCPListenerThread extends Thread {
 				client.receiveResponse(receivedMessage);
 			} catch (IOException e) {
 				System.out.println("Connection to Server lost");
+				client.startOutageMode();
 				exit();
 			}
 		}
@@ -38,6 +39,6 @@ public class ClientTCPListenerThread extends Thread {
 	
 	public void exit() {
 		interrupt();
-		client.exitClient();
+//		client.exitClient();
 	}
 }

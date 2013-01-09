@@ -14,6 +14,8 @@ import java.util.Scanner;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
+import outageHandling.OutageHandler;
+
 import security.KeyReader;
 import security.MyRandomGenerator;
 
@@ -56,6 +58,8 @@ public class Client {
 	private Boolean secondAttemptRequested = false;
 	private KeyReader keyReader;
 	private String clientChallenge;
+	
+	private OutageHandler outageHandler;
 
 	public static void main(String[] args) {
 
@@ -92,6 +96,9 @@ public class Client {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			
+			//load OutageHandler
+			outageHandler = new OutageHandler(this);
 			
 			
 		}
@@ -660,7 +667,12 @@ public class Client {
 		return username;
 	}
 
-	private Key getOwnPrivateKey() throws IOException {
+	public Key getOwnPrivateKey() throws IOException {
 		return keyReader.getPrivateKeyClient(username);
+	}
+
+	public void startOutageMode() {
+		outageHandler.startOutageMode();
+		
 	}
 }

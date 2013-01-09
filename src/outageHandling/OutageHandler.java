@@ -3,13 +3,19 @@ package outageHandling;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.util.encoders.Base64;
+
+import communication.Channel;
 
 import server.Server;
 import server.User;
@@ -99,21 +105,33 @@ public class OutageHandler {
 		return printableList;
 	}
 	
-	//TODO implement
 	public String signMessage(String message) {
 		String signedMessage = "";
 		
 		
 		
 		Signature signature;
-//		try {
-//			signature = Signature.getInstance("SHA512withRSA");
-//			signature.initSign(client.getSecretKey());
-//			signature.update((message).getBytes());
-//			byte[] signatureInBytes = instance.sign();
-//		} catch (NoSuchAlgorithmException e) {
-//			e.printStackTrace();
-//		}
+		try {
+			signature = Signature.getInstance("SHA512withRSA");
+			try {
+				signature.initSign((PrivateKey) client.getOwnPrivateKey());
+				signature.update((message).getBytes());
+				byte[] signatureInBytes = signature.sign();
+				byte[] encodedSignature = Base64.encode(signatureInBytes); 
+				String append = new String(encodedSignature);
+				signedMessage = message + " " + append;
+			} catch (InvalidKeyException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (SignatureException e) {
+				e.printStackTrace();
+			}
+			
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		
 		return signedMessage;
 	}
 	
@@ -136,5 +154,27 @@ public class OutageHandler {
 			mean /= timeStamps.length;
 		}
 		return mean;
+	}
+
+	public void startOutageMode() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	//TODO Implement
+	public void receiveMessage(String message, Channel channel) {
+		String[] input = message.split(" ");
+		
+		//!getTimestamp <auctionID> <price>
+		if(input[0].equals("!getTimestamp")) {
+			int auctionID = Integer.parseInt(input[1]);
+			double price = Double.parseDouble(input[2]);
+			
+			String returnMessage =	"!timestamp" + " " + auctionID + " " + price + " " + getTimeStamp();	
+			returnMessage = signMessage(returnMessage);
+			
+			
+		}
+		
 	}
 }

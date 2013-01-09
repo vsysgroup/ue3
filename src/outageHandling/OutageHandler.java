@@ -11,6 +11,8 @@ import java.util.Iterator;
 
 import org.bouncycastle.openssl.PEMReader;
 
+import communication.Channel;
+
 import server.Server;
 import server.User;
 import client.Client;
@@ -139,6 +141,11 @@ public class OutageHandler {
 	}
 
 	public void startOutageMode() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void receiveMessage(String receivedMessage, Channel channel) {
 		// TODO Auto-generated method stub
 		
 	}

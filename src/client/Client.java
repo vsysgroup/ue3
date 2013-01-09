@@ -2,7 +2,9 @@ package client;
 
 import integrity.IntegrityManager;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.DatagramSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -12,6 +14,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.Scanner;
 
+import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
@@ -33,7 +36,7 @@ import exception.WrongParameterCountException;
  * 
  */
 public class Client {
-	
+
 	public static final Logger LOG = Logger.getLogger(Client.class);
 
 	private String serverHost;
@@ -47,18 +50,18 @@ public class Client {
 	private DatagramSocket datagramSocket = null;
 	private ClientTCPListenerThread clientTCPListenerThread = null;
 	private int clientPort;
-	
+
 	private String pathToPublicServerKey;
 	private String pathToKeyDirectory;
-	
+
 	private IntegrityManager integrityManager;
 	private Key clientSecretKey;
 	private Key clientPrivateKey = null;
-	
+
 	private Boolean secondAttemptRequested = false;
 	private KeyReader keyReader;
 	private String clientChallenge;
-	
+
 	private OutageHandler outageHandler;
 
 	public static void main(String[] args) {
@@ -78,6 +81,8 @@ public class Client {
 	 * @throws WrongParameterCountException
 	 */
 	public Client(String[] args) throws WrongParameterCountException {
+		BasicConfigurator.configure();
+		
 		boolean test = false;
 		//check if parameters are alright
 		if(args.length != 5) {
@@ -88,19 +93,19 @@ public class Client {
 			this.clientPort = Integer.parseInt(args[2]);
 			this.pathToPublicServerKey = args[3];
 			this.pathToKeyDirectory = args[4];
-			
+
 			//load OutageHandler
 			outageHandler = new OutageHandler(this);
-			
+
 		}
-		
+
 		//key reader for reading out private and public keys
 		keyReader = new KeyReader(pathToKeyDirectory);
 
 		clientStatus = true;
 
 		System.out.println("Starting Client.");
-		
+
 		//channel is set
 		establishTCPConnection();
 		clientTCPListenerThread = new ClientTCPListenerThread(channel, this);
@@ -129,8 +134,8 @@ public class Client {
 						System.out.println("!login <username>");
 						System.out.println("!end");
 					}
-					
-					
+
+
 				}
 			} catch(Exception e) {
 				System.out.println("Connection to the server failed!");
@@ -205,28 +210,42 @@ public class Client {
 
 	private void listWhileNotLoggedIn() {
 		channel.send("!list".getBytes());
-		
+
 	}
 
 	/*
 	 * syntax: !login <username> <tcpPort> <client-challenge>
 	 */
 	public void login(String username) {
-		try {
-			clientPrivateKey = keyReader.getPrivateKeyClient(username);
-		} catch (IOException e1) {
-			LOG.error("private key couldn't be read");
-			e1.printStackTrace();
+		boolean pwCorrect = false;
+		while(!pwCorrect) {
+			try {
+				clientPrivateKey = keyReader.getPrivateKeyClient(username);
+				pwCorrect = true;
+			} catch (IOException e1) {
+				LOG.error("private key couldn't be read");
+				System.out.println("wrong pw - to try again press 'y' ");
+				char stdIn = 0;
+				try {
+					stdIn = (char) new BufferedReader(new InputStreamReader(System.in)).read();
+					if(stdIn != 'y') {
+						return;
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 		}
 		((RSAChannel)channel).setDecryptKey(clientPrivateKey);
-		
+
 		clientChallenge = MyRandomGenerator.createChallenge();
-//		byte[] testNumber = MyBase64.decode(clientChallenge);
+		//		byte[] testNumber = MyBase64.decode(clientChallenge);
 		String msg = "!login" + " " + username + " " + serverTCPPort + " " + clientChallenge;
 		// message encrypted using RSA initialized with the public key of the auction server
 		// encode overall msg in base64
 		channel.send(msg.getBytes());	
-		
+
 		//load IntegrityManger and client's secret key
 		integrityManager = new IntegrityManager(pathToKeyDirectory);
 		try {
@@ -259,7 +278,7 @@ public class Client {
 	public void receiveResponse(String message) throws IOException {
 		String response = message;
 		String[] splitResponse = response.split(" ");
-		
+
 		//part of handshake
 		if(splitResponse[0].equals("!ok")) {
 			//syntax: !ok <client-challenge> <server-challenge> <secret-key> <iv-parameter>
@@ -267,7 +286,7 @@ public class Client {
 			String serverChallenge = splitResponse[2];
 			Key secretKey = MyRandomGenerator.convertSecretKey(splitResponse[3]);
 			AlgorithmParameterSpec iv = MyRandomGenerator.convertIV(splitResponse[4]);
-			
+
 			if(!responseChallenge.equals(clientChallenge)) {
 				System.out.println("Access denied - server couldn't read your challenge; LOGGING OUT");
 				LOG.info("server couldn't identify client");
@@ -287,7 +306,7 @@ public class Client {
 		 * login successful <username>
 		 */
 		if(splitResponse[0].equals("login")) {
-			
+
 			if(splitResponse[1].equals("failed")) {
 				System.out.println("Somebody is already logged in with that name. Please choose a different name and try again.");
 			} 
@@ -337,17 +356,17 @@ public class Client {
 				String removeFromMessage1 = splitResponse[splitResponse.length-1];
 				String messageWithoutMAC = message.replace(removeFromMessage1, ""); 
 				messageWithoutMAC = messageWithoutMAC.trim();
-				
+
 				try {
-					
+
 					// create an own hMAC
 					byte[] ownMAC = integrityManager.createHashMAC(clientSecretKey, messageWithoutMAC);
 					// read the hMAC from the message
 					byte[] decodedHMAC = Base64.decode(splitResponse[splitResponse.length-1]); 
-					
+
 					//compare the two hMACs
 					boolean match = integrityManager.verifyHashMAC(ownMAC, decodedHMAC);
-					
+
 					if(match) {
 						String [] newSplitResponse = new String[splitResponse.length-1];
 						for(int i = 0; i < splitResponse.length-1; i++) {
@@ -368,14 +387,14 @@ public class Client {
 							secondAttemptRequested = false;
 						}
 					}
-					
+
 				} catch (InvalidKeyException e) {
 					e.printStackTrace();
 				} catch (NoSuchAlgorithmException e) {
 					e.printStackTrace();
 				}
 			}
-			
+
 		}
 
 		/**
@@ -487,7 +506,7 @@ public class Client {
 				requestRepetition();
 			}
 		}
-		
+
 		/**
 		 * accepts the following responses:
 		 * !clientList <clientList>
@@ -496,8 +515,8 @@ public class Client {
 			outageHandler.buildClientListClientSide(splitResponse);
 			System.out.println(outageHandler.getPrintableClientList());
 		}
-		
-		
+
+
 	}
 
 
@@ -508,7 +527,7 @@ public class Client {
 		} else {
 			secondAttemptRequested = false;
 		}
-		
+
 	}
 
 	/**
@@ -527,7 +546,7 @@ public class Client {
 		channel.send(("!create" + " " + username + " "  + seconds + " " + description).getBytes());
 
 	}
-	
+
 	/**
 	 * Sends message to the server to request the list of all clients
 	 */
@@ -558,7 +577,7 @@ public class Client {
 	 */
 	public String buildList(String[] splitString) {
 		String output = "";
-		
+
 		for(int i = 1; i<splitString.length; i++){
 			if(splitString[i].equals("-|-")) {
 				output += "\n";
@@ -566,10 +585,10 @@ public class Client {
 				output += splitString[i];
 				output += " ";
 			}
-			
+
 		}
 		output.trim();
-		
+
 		return output;
 	}
 
@@ -653,27 +672,27 @@ public class Client {
 		}
 	}
 	public boolean verifyMessage(String message, String[] splitResponse) {
-		
+
 		String removeFromMessage1 = splitResponse[splitResponse.length-1];
 		String messageWithoutMAC = message.replace(removeFromMessage1, ""); 
 		messageWithoutMAC = messageWithoutMAC.trim();
 		boolean match = true;
 		try {
-			
+
 			// create an own hMAC
 			byte[] ownMAC = integrityManager.createHashMAC(clientSecretKey, messageWithoutMAC);
 			// read the hMAC from the message
 			byte[] decodedHMAC = Base64.decode(splitResponse[splitResponse.length-1]); 
-			
+
 			//compare the two hMACs
 			match = integrityManager.verifyHashMAC(ownMAC, decodedHMAC);
-			
+
 		} catch (InvalidKeyException e) {
 			e.printStackTrace();
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
-		
+
 		return match;
 	}
 
@@ -692,6 +711,6 @@ public class Client {
 
 	public void startOutageMode() {
 		outageHandler.startOutageMode();
-		
+
 	}
 }

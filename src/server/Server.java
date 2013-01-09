@@ -24,7 +24,6 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import outageHandling.OutageHandler;
-
 import registry.RegistryReader;
 import security.KeyReader;
 import security.MyRandomGenerator;
@@ -119,12 +118,15 @@ public class Server {
 
 			//load outageHandler
 			outageHandler = new OutageHandler(this);
-
-			keyReader = new KeyReader(pathToKeyDirectory);
-			try {
-				serverPrivateKey = keyReader.getPrivateKeyServer(pathToServerKey);
-			} catch (IOException e) {
-				e.printStackTrace();
+			boolean successful = false;
+			while (!successful) {
+				keyReader = new KeyReader(pathToKeyDirectory);
+				try {
+					serverPrivateKey = keyReader.getPrivateKeyServer(pathToServerKey);
+					successful = true;
+				} catch (IOException e) {
+					System.out.println("Wrong password - try again");			
+				}				
 			}
 		}
 
@@ -252,7 +254,7 @@ public class Server {
 					e1.printStackTrace();
 				}
 				users.add(currentUser);
-				
+
 			} else { // existing user
 				currentUser = findUser(username);
 
@@ -411,7 +413,7 @@ public class Server {
 		 * list <list> <hMAC>
 		 */
 		if(input[0].equals("!list") && input.length == 2) {
-			
+
 			//create a hashed MAC for the specific user
 			String username = input[1];
 			User user = findUser(username);
@@ -432,7 +434,7 @@ public class Server {
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			}	
-			
+
 			if(!user.isLoggedIn()) {
 				channel.getDecoratedChannel().send(returnMessage.getBytes());
 			} else {

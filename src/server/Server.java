@@ -23,6 +23,8 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
+import outageHandling.OutageHandler;
+
 import registry.RegistryReader;
 import security.KeyReader;
 import security.MyRandomGenerator;
@@ -77,6 +79,8 @@ public class Server {
 	private String secretKey = null;
 	private String serverChallenge = null;
 	private boolean secureChannelEstablished = false;
+	
+	private OutageHandler outageHandler;
 
 	public static void main(String[] args) {
 		
@@ -110,11 +114,13 @@ public class Server {
 			//load integrityManager
 			integrityManager = new IntegrityManager(pathToKeyDirectory);
 			
+			//load outageHandler
+			outageHandler = new OutageHandler(this);
+			
 			keyReader = new KeyReader(pathToKeyDirectory);
 			try {
 				serverPrivateKey = keyReader.getPrivateKeyServer(pathToServerKey);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -455,6 +461,28 @@ public class Server {
 			//add hashed MAC to the message
 			Key key = user.getKey();
 			String returnMessage =	user.getLastMessage();	
+			try {
+				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+				byte[] encodedHMAC = Base64.encode(hMAC);  
+				String append = new String(encodedHMAC);
+				returnMessage += " " + append;
+			} catch (InvalidKeyException e) {
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}	
+			responseMsg.send(returnMessage.getBytes());
+		}
+		
+		/**
+		 * Sends the requested list of clients to the user
+		 */
+		if(input[0].equals("!getClientList")) {
+			String username = input[1];
+			User user = findUser(username);
+			//add hashed MAC to the message
+			Key key = user.getKey();
+			String returnMessage = "!clientList" + " " + outageHandler.buildClientListServerSide();
 			try {
 				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
 				byte[] encodedHMAC = Base64.encode(hMAC);  

@@ -89,14 +89,6 @@ public class Client {
 			this.pathToPublicServerKey = args[3];
 			this.pathToKeyDirectory = args[4];
 			
-			//load IntegrityManger and client's secret key
-			integrityManager = new IntegrityManager(pathToKeyDirectory);
-			try {
-				clientSecretKey = integrityManager.getSecretKey("alice");
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			
 			//load OutageHandler
 			outageHandler = new OutageHandler(this);
 			
@@ -193,6 +185,10 @@ public class Client {
 					list();
 					continue;
 				}
+				else if(input[0].equals("!getClientList")) {
+					requestClientList();
+					continue;
+				}
 				else {
 					System.out.println("Wrong command or wrong parameters. Only the following commands are allowed:");
 					allCommands();
@@ -229,7 +225,15 @@ public class Client {
 		String msg = "!login" + " " + username + " " + serverTCPPort + " " + clientChallenge;
 		// message encrypted using RSA initialized with the public key of the auction server
 		// encode overall msg in base64
-		channel.send(msg.getBytes());		
+		channel.send(msg.getBytes());	
+		
+		//load IntegrityManger and client's secret key
+		integrityManager = new IntegrityManager(pathToKeyDirectory);
+		try {
+			clientSecretKey = integrityManager.getSecretKey(username);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private void establishTCPConnection() {
@@ -483,6 +487,17 @@ public class Client {
 				requestRepetition();
 			}
 		}
+		
+		/**
+		 * accepts the following responses:
+		 * !clientList <clientList>
+		 */
+		else if(splitResponse[0].equals("!clientList")) {
+			outageHandler.buildClientListClientSide(splitResponse);
+			System.out.println(outageHandler.getPrintableClientList());
+		}
+		
+		
 	}
 
 
@@ -511,6 +526,13 @@ public class Client {
 	public void createAuction(int seconds, String description) {
 		channel.send(("!create" + " " + username + " "  + seconds + " " + description).getBytes());
 
+	}
+	
+	/**
+	 * Sends message to the server to request the list of all clients
+	 */
+	public void requestClientList() {
+		channel.send(("!getClientList" + " " + username).getBytes());
 	}
 
 	/**

@@ -25,7 +25,7 @@ import org.bouncycastle.util.encoders.Base64;
 
 import registry.RegistryReader;
 import security.KeyReader;
-import security.KeyReader.KeyOwner;
+import security.MyRandomGenerator;
 import analyticsServer.AnalyticsServerInterface;
 import analyticsServer.AuctionEvent;
 import analyticsServer.BidEvent;
@@ -34,6 +34,7 @@ import billingServer.IBillingServer;
 import billingServer.IBillingServerSecure;
 
 import communication.Channel;
+import communication.RSAChannel;
 
 import exception.WrongParameterCountException;
 
@@ -70,6 +71,8 @@ public class Server {
 	private String pathToServerKey;
 	
 	private IntegrityManager integrityManager;
+	private Key serverPrivateKey;
+	private KeyReader keyReader;
 
 	public static void main(String[] args) {
 		
@@ -102,6 +105,14 @@ public class Server {
 			
 			//load integrityManager
 			integrityManager = new IntegrityManager(pathToKeyDirectory);
+			
+			keyReader = new KeyReader(pathToKeyDirectory);
+			try {
+				serverPrivateKey = keyReader.getPrivateKeyServer(pathToServerKey);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		System.out.println("Starting Server.");
@@ -117,7 +128,7 @@ public class Server {
 
 		serverStatus = true;
 
-		serverTCPListenerThread = new ServerTCPListenerThread(serverSocket, this);
+		serverTCPListenerThread = new ServerTCPListenerThread(serverSocket, this, serverPrivateKey);
 		serverTCPListenerThread.start();
 		auctionCheckThread = new AuctionCheckThread(this);
 		auctionCheckThread.start();
@@ -130,6 +141,10 @@ public class Server {
 				return;
 			}
 		}
+	}
+	
+	public Key getClientPublicKey(String username) throws IOException {
+		return keyReader.getPublicKeyClient(username);
 	}
 
 	/**
@@ -154,6 +169,13 @@ public class Server {
 
 			if(!userKnown(username)){
 				User newUser = new User(username);
+				try {
+					Key clientPublicKey = getClientPublicKey(username);
+					((RSAChannel) responseMsg).setEncryptKey(clientPublicKey);
+				} catch (IOException e2) {
+					// TODO Auto-generated catch block
+					e2.printStackTrace();
+				}
 				users.add(newUser);
 				
 				//add user's key to newUser
@@ -172,12 +194,24 @@ public class Server {
 						e.printStackTrace();
 					}
 				}
-		
-				//add hashed MAC to the message
+				
+				// generates a 32 byte secure random number => server-challenge
+				String serverChallenge = MyRandomGenerator.createChallenge();
+				String secretKey = null;
+				try {
+					secretKey = MyRandomGenerator.createSecretKey();
+				} catch (NoSuchAlgorithmException e1) {
+					LOG.error("creating secret key failed");
+					e1.printStackTrace();
+				}
+				String iv = MyRandomGenerator.createIV();
+				
+//				String returnMessage =	"login successful" + " " + username;
+				String returnMessage = "!ok " + clientChallenge + " " + serverChallenge + " " + secretKey + " " + iv;
 				
 				Key key = newUser.getKey();
-				String returnMessage =	"login successful" + " " + username;	
 				try {
+					//add hashed MAC to the message
 					byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
 					byte[] encodedHMAC = Base64.encode(hMAC);  
 					String append = new String(encodedHMAC);
@@ -188,7 +222,6 @@ public class Server {
 				} catch (NoSuchAlgorithmException e) {
 					e.printStackTrace();
 				}	
-				
 				
 				responseMsg.send(returnMessage.getBytes());
 			}
@@ -758,11 +791,6 @@ public class Server {
 		int randomNumber = randomGenerator.nextInt(amount);
 		Auction randomAuction = auctions.get(randomNumber);
 		return randomAuction;
-	}
-
-	public Key getPublicKey(KeyOwner owner) throws IOException {
-		KeyReader keyReader = new KeyReader(pathToKeyDirectory);
-		return keyReader.getPublicKey(KeyOwner.ALICE);
 	}
 
 	public ArrayList<User> getUsers() {

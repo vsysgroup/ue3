@@ -15,33 +15,22 @@ import org.apache.log4j.Logger;
 public class RSAChannel extends DecoratorChannel {
 
 	public static final Logger LOG = Logger.getLogger(RSAChannel.class);
-	private Key key;
 	
-	public RSAChannel(Channel channel, Key key) {
-		super(channel);
-		this.key = key;
+	private Cipher cipherEncrypt;
+	private Cipher cipherDecrypt;
+	
+	public RSAChannel(Channel channel) {
+		super(channel);		
 	}
 
-	@Override
-	public void send(byte[] out) {
-		decoratedChannel.send(out);
-	}
-
-	@Override
-	public byte[] receive() throws IOException {
-		return decoratedChannel.receive();
-	}
-
-	private byte[] encrypt(byte[] msg) {
-		Cipher crypt;
-		byte[] encryptedMsg = null;
+	public void setDecryptKey(Key decryptKey) {
 		try {
-			crypt = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+			this.cipherDecrypt = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+			
 			// MODE is the encryption/decryption mode
 			// KEY is either a private, public or secret key
 			// IV is an init vector, needed for AES
-			crypt.init(Cipher.ENCRYPT_MODE, key);
-			encryptedMsg = crypt.doFinal(msg);
+			this.cipherDecrypt.init(Cipher.DECRYPT_MODE, decryptKey);			
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -51,6 +40,42 @@ public class RSAChannel extends DecoratorChannel {
 		} catch (InvalidKeyException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+	}
+	
+	public void setEncryptKey(Key encryptKey) {
+		try {
+			this.cipherEncrypt = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+			// MODE is the encryption/decryption mode
+			// KEY is either a private, public or secret key
+			// IV is an init vector, needed for AES
+			this.cipherEncrypt.init(Cipher.ENCRYPT_MODE, encryptKey);
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void send(byte[] out) {
+		decoratedChannel.send(encrypt(out));
+	}
+
+	@Override
+	public byte[] receive() throws IOException {
+		return decrypt(decoratedChannel.receive());
+	}
+
+	private byte[] encrypt(byte[] msg) {		
+		byte[] encryptedMsg = null;
+		try {			
+			encryptedMsg = cipherEncrypt.doFinal(msg);
 		} catch (IllegalBlockSizeException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -59,5 +84,19 @@ public class RSAChannel extends DecoratorChannel {
 			e.printStackTrace();
 		}
 		return encryptedMsg;
+	}
+	
+	private byte[] decrypt(byte[] msg) {		
+		byte[] decryptedMsg = null;
+		try {			
+			decryptedMsg = cipherDecrypt.doFinal(msg);
+		} catch (IllegalBlockSizeException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BadPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return decryptedMsg;
 	}
 }

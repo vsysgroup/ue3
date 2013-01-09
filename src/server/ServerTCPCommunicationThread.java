@@ -2,8 +2,7 @@ package server;
 
 import java.io.IOException;
 import java.net.Socket;
-
-import security.KeyReader.KeyOwner;
+import java.security.Key;
 
 import communication.Base64Channel;
 import communication.Channel;
@@ -21,16 +20,18 @@ public class ServerTCPCommunicationThread extends Thread {
 	private Socket clientSocket = null;
 	private Server server;
 	private Channel channel = null;
+	private Key serverPrivateKey;
 	
-	public ServerTCPCommunicationThread(Socket socket, Server server) {
+	public ServerTCPCommunicationThread(Socket socket, Server server, Key serverPrivateKey) {
 		this.clientSocket = socket;
 		this.server = server;
-		
+		this.serverPrivateKey = serverPrivateKey;
 	}
 	
 	public void run() {
 		try {
-			this.channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)), server.getPublicKey(KeyOwner.ALICE));
+			this.channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)));
+			((RSAChannel) this.channel).setDecryptKey(serverPrivateKey);
 		} catch(IOException e) {
 			exit();
 			return;

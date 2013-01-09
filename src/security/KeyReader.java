@@ -14,44 +14,54 @@ import org.bouncycastle.openssl.PasswordFinder;
 
 public class KeyReader {
 
-	public enum KeyOwner {SERVER, ALICE}
-
-	private String pathToServerPublicKey = null;
 	private String pathToKeyDirectory;
 
 	public KeyReader(String pathToKeyDirectory) {
 		this.pathToKeyDirectory = pathToKeyDirectory;
 	}
 	
-	public KeyReader(String pathToServerPublicKey, String pathToKeyDirectory) {
-		this.pathToServerPublicKey = pathToServerPublicKey;
-		this.pathToKeyDirectory = pathToKeyDirectory;
-	}
-	
-	public Key getPublicKey(KeyOwner owner) throws IOException {
-		String pathToPublicKey = "";
-		switch(owner) {
-			case ALICE: pathToPublicKey = "keys/" + "alice.pub.pem";
-				break;
-			case SERVER: pathToPublicKey = pathToServerPublicKey;
-				break;
-		}
-
-		PEMReader in = new PEMReader(new FileReader(pathToPublicKey));
+	public Key getPublicKeyServer(String pathToServerPublicKey) throws IOException {
+		PEMReader in = new PEMReader(new FileReader(pathToServerPublicKey));
 		PublicKey publicKey = (PublicKey) in.readObject(); 
 		return publicKey;
 	}
-
-	public Key getPrivateKey(KeyOwner owner) throws IOException {
-		String pathToPrivateKey = "";
-		switch(owner) {
-			case ALICE: pathToPrivateKey = pathToKeyDirectory + "alice.pem";
-				break;
-			case SERVER: pathToPrivateKey = pathToKeyDirectory + "auction-server.pem";
-				break;
-		}
+	
+	public Key getPublicKeyClient(String username) throws IOException {
+		String path = pathToKeyDirectory + username + ".pub.pem";
+		PEMReader in = new PEMReader(new FileReader(path));
+		PublicKey publicKey = (PublicKey) in.readObject(); 
+		return publicKey;
+	}
+	
+	public Key getPrivateKeyServer(String pathToPrivateKey) throws IOException {
 		
 		PEMReader in = new PEMReader(new FileReader(pathToPrivateKey), new PasswordFinder() {
+			//passphrase for server key: 23456
+			@Override
+			public char[] getPassword() {
+				char[] password = null;
+				// reads the password from standard input for decrypting the private key
+				System.out.println("Enter pass phrase:");
+				try {
+					password = new BufferedReader(new InputStreamReader(System.in)).readLine().toCharArray();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				return password;
+			} 
+
+		});
+
+		KeyPair keypair =  (KeyPair) in.readObject();;
+		PrivateKey privateKey = keypair.getPrivate();
+		return privateKey;
+	}
+
+	public Key getPrivateKeyClient(String username) throws IOException {
+		String path = pathToKeyDirectory + username + ".pem";
+		
+		PEMReader in = new PEMReader(new FileReader(path), new PasswordFinder() {
 			//passphrase for all private keys: 12345
 			@Override
 			public char[] getPassword() {

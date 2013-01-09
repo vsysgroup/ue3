@@ -3,6 +3,7 @@ package server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.Key;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -16,12 +17,14 @@ public class ServerTCPListenerThread extends Thread {
 	private ServerSocket serverSocket = null;
 	private Server server = null;
 	private ArrayList<Socket> sockets = new ArrayList<Socket>();
+	private Key serverPrivateKey;
 	
-	public ServerTCPListenerThread(ServerSocket serverSocket, Server server) {
+	public ServerTCPListenerThread(ServerSocket serverSocket, Server server, Key serverPrivateKey) {
 		this.serverSocket = serverSocket;
 		this.server = server;
+		this.serverPrivateKey = serverPrivateKey;
 	}
-	
+
 	public void run() {
 		Socket socket = null;
 		
@@ -29,7 +32,7 @@ public class ServerTCPListenerThread extends Thread {
 			//establish connection by accept
 			try {
 				socket = serverSocket.accept();
-				new ServerTCPCommunicationThread(socket, server).start();
+				new ServerTCPCommunicationThread(socket, server, serverPrivateKey).start();
 				sockets.add(socket);
 			} catch (IOException e) {
 				exit();

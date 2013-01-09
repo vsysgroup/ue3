@@ -9,15 +9,13 @@ import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.SecureRandom;
 import java.util.Scanner;
 
+import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import security.KeyReader;
-import security.KeyReader.KeyOwner;
-import security.MyBase64;
+import security.MyRandomGenerator;
 
 import communication.Base64Channel;
 import communication.Channel;
@@ -33,6 +31,8 @@ import exception.WrongParameterCountException;
  * 
  */
 public class Client {
+	
+	public static final Logger LOG = Logger.getLogger(Client.class);
 
 	private String serverHost;
 	private int serverTCPPort;
@@ -51,9 +51,11 @@ public class Client {
 	
 	private IntegrityManager integrityManager;
 	private Key clientSecretKey;
+	private Key clientPrivateKey;
 	
 	private Boolean secondAttemptRequested = false;
 	private KeyReader keyReader;
+	private String clientChallenge;
 
 	public static void main(String[] args) {
 
@@ -91,10 +93,11 @@ public class Client {
 				e.printStackTrace();
 			}
 			
+			
 		}
 		
 		//key reader for reading out private and public keys
-		keyReader = new KeyReader(pathToPublicServerKey, pathToKeyDirectory);
+		keyReader = new KeyReader(pathToKeyDirectory);
 
 		clientStatus = true;
 
@@ -206,12 +209,15 @@ public class Client {
 	 * syntax: !login <username> <tcpPort> <client-challenge>
 	 */
 	public void login(String username) {
-		// generates a 32 byte secure random number => client-challenge
-		SecureRandom secureRandom = new SecureRandom();
-		final byte[] number = new byte[32];
-		secureRandom.nextBytes(number);
-		//TODO encoding challenge separately in base64
-		String clientChallenge = MyBase64.encode(number);
+		try {
+			clientPrivateKey = keyReader.getPrivateKeyClient(username);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		((RSAChannel)channel).setDecryptKey(clientPrivateKey);
+		
+		clientChallenge = MyRandomGenerator.createChallenge();
 //		byte[] testNumber = MyBase64.decode(clientChallenge);
 		String msg = "!login" + " " + username + " " + serverTCPPort + " " + clientChallenge;
 		// message encrypted using RSA initialized with the public key of the auction server
@@ -220,6 +226,8 @@ public class Client {
 	}
 
 	private void establishTCPConnection() {
+
+		
 		try {
 			clientSocket = new Socket(serverHost, serverTCPPort);
 		} catch (UnknownHostException e) {
@@ -228,7 +236,8 @@ public class Client {
 			System.out.println("Connection to Server could not be established - IOException");
 		}
 		try {
-			channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)), keyReader.getPublicKey(KeyOwner.SERVER));
+			channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)));
+			((RSAChannel)channel).setEncryptKey(keyReader.getPublicKeyServer(pathToPublicServerKey));
 		} catch (IOException e) {
 			System.out.println("Communications with Server could not be established - IOException");
 		}
@@ -242,6 +251,32 @@ public class Client {
 		String response = message;
 		String[] splitResponse = response.split(" ");
 		
+		if(splitResponse[0].equals("!ok")) {
+			//syntax: !ok <client-challenge> <server-challenge> <secret-key> <iv-parameter>
+			String responseChallenge = splitResponse[1];
+			String serverChallenge = splitResponse[2];
+			String secretKey = splitResponse[3];
+			String iv = splitResponse[4];
+			
+			//TODO decode
+			
+			
+			if(!responseChallenge.equals(clientChallenge)) {
+				System.out.println("Access denied - server couldn't read your challenge; LOGGING OUT");
+				LOG.info("server couldn't identify client");
+				exitClient();
+			} else {
+				// verify handshake, final step
+				//channel = new RSAChannel(channel, key)
+				
+				
+				channel.send(serverChallenge.getBytes());
+			}
+			
+			//TODO return server challenge
+			//TODO initialize AES channel
+			
+		}
 
 		/**
 		 * accepts the following responses:
@@ -257,6 +292,7 @@ public class Client {
 				System.out.println("successfully logged in as " + splitResponse[2] + "!");
 				setUsername(splitResponse[2]);
 				setLoggedIn();
+				//TODO save private key in field
 			}
 			//verify Message
 			boolean	verified = verifyMessage(message, splitResponse);
@@ -624,5 +660,7 @@ public class Client {
 		return username;
 	}
 
-
+	private Key getOwnPrivateKey() throws IOException {
+		return keyReader.getPrivateKeyClient(username);
+	}
 }

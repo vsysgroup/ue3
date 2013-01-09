@@ -3,7 +3,7 @@ package security;
 import org.bouncycastle.util.encoders.Base64;
 
 /**
- * 
+ * encodes and decodes base64 with strings
  * @author Barbara Schwankl 0852176
  *
  */

@@ -667,7 +667,7 @@ public class Client {
 		return username;
 	}
 
-	private Key getOwnPrivateKey() throws IOException {
+	public Key getOwnPrivateKey() throws IOException {
 		return keyReader.getPrivateKeyClient(username);
 	}
 

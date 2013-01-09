@@ -43,5 +43,10 @@ public class Base64Channel extends DecoratorChannel {
 		return Base64.decode(msg); 
 	}
 
+	@Override
+	public Channel getDecoratedChannel() {
+		return decoratedChannel;
+	}
+
 	
 }

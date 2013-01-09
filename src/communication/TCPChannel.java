@@ -43,4 +43,9 @@ public class TCPChannel implements Channel {
 		byte[] tmp = message.getBytes();
 		return tmp;
 	}
+
+	@Override
+	public Channel getDecoratedChannel() {
+		return null;
+	}
 }

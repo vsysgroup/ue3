@@ -223,6 +223,9 @@ public class Server {
 
 			} else {
 				// todo: stop everything - challenge response is wrong
+				channel.send("identification failed".getBytes());
+				commSession.setCurrentUser(null);
+				return;
 			}
 		}
 
@@ -408,7 +411,7 @@ public class Server {
 		 * list <list> <hMAC>
 		 */
 		if(input[0].equals("!list") && input.length == 2) {
-
+			
 			//create a hashed MAC for the specific user
 			String username = input[1];
 			User user = findUser(username);
@@ -429,7 +432,12 @@ public class Server {
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			}	
-			channel.send(returnMessage.getBytes());
+			
+			if(!user.isLoggedIn()) {
+				channel.getDecoratedChannel().send(returnMessage.getBytes());
+			} else {
+				channel.send(returnMessage.getBytes());
+			}
 		}
 
 		/**

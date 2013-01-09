@@ -73,6 +73,8 @@ public class Server {
 	private IntegrityManager integrityManager;
 	private Key serverPrivateKey;
 	private KeyReader keyReader;
+	private String iv = null;
+	private String secretKey = null;
 
 	public static void main(String[] args) {
 		
@@ -169,6 +171,7 @@ public class Server {
 
 			if(!userKnown(username)){
 				User newUser = new User(username);
+				newUser.setPort(tcpPort);
 				try {
 					Key clientPublicKey = getClientPublicKey(username);
 					((RSAChannel) responseMsg).setEncryptKey(clientPublicKey);
@@ -197,14 +200,13 @@ public class Server {
 				
 				// generates a 32 byte secure random number => server-challenge
 				String serverChallenge = MyRandomGenerator.createChallenge();
-				String secretKey = null;
+				iv = MyRandomGenerator.createIV();
 				try {
 					secretKey = MyRandomGenerator.createSecretKey();
 				} catch (NoSuchAlgorithmException e1) {
 					LOG.error("creating secret key failed");
 					e1.printStackTrace();
 				}
-				String iv = MyRandomGenerator.createIV();
 				
 //				String returnMessage =	"login successful" + " " + username;
 				String returnMessage = "!ok " + clientChallenge + " " + serverChallenge + " " + secretKey + " " + iv;
@@ -453,6 +455,17 @@ public class Server {
 			}	
 			responseMsg.send(returnMessage.getBytes());
 		}
+	}
+	
+	/**
+	 * 
+	 * @return null if key and iv not yet initialized; [key, iv] otherwise
+	 */
+	public String[] getSecretKeyAndIV() {
+		if(secretKey == null || iv == null) {
+			return null;
+		}
+		return new String[] {secretKey, iv};
 	}
 
 	/**

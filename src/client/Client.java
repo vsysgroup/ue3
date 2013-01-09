@@ -9,13 +9,13 @@ import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.AlgorithmParameterSpec;
 import java.util.Scanner;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import outageHandling.OutageHandler;
-
 import security.KeyReader;
 import security.MyRandomGenerator;
 
@@ -53,7 +53,7 @@ public class Client {
 	
 	private IntegrityManager integrityManager;
 	private Key clientSecretKey;
-	private Key clientPrivateKey;
+	private Key clientPrivateKey = null;
 	
 	private Boolean secondAttemptRequested = false;
 	private KeyReader keyReader;
@@ -100,7 +100,6 @@ public class Client {
 			//load OutageHandler
 			outageHandler = new OutageHandler(this);
 			
-			
 		}
 		
 		//key reader for reading out private and public keys
@@ -110,6 +109,7 @@ public class Client {
 
 		System.out.println("Starting Client.");
 		
+		//channel is set
 		establishTCPConnection();
 		clientTCPListenerThread = new ClientTCPListenerThread(channel, this);
 		clientTCPListenerThread.start();
@@ -219,7 +219,7 @@ public class Client {
 		try {
 			clientPrivateKey = keyReader.getPrivateKeyClient(username);
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
+			LOG.error("private key couldn't be read");
 			e1.printStackTrace();
 		}
 		((RSAChannel)channel).setDecryptKey(clientPrivateKey);
@@ -233,8 +233,6 @@ public class Client {
 	}
 
 	private void establishTCPConnection() {
-
-		
 		try {
 			clientSocket = new Socket(serverHost, serverTCPPort);
 		} catch (UnknownHostException e) {
@@ -254,35 +252,28 @@ public class Client {
 	 * Receives a message and processes it
 	 * @param message
 	 */
-	public void receiveResponse(String message) {
+	public void receiveResponse(String message) throws IOException {
 		String response = message;
 		String[] splitResponse = response.split(" ");
 		
+		//part of handshake
 		if(splitResponse[0].equals("!ok")) {
 			//syntax: !ok <client-challenge> <server-challenge> <secret-key> <iv-parameter>
 			String responseChallenge = splitResponse[1];
-			String serverChallenge = splitResponse[2];
-			String secretKey = splitResponse[3];
-			String iv = splitResponse[4];
-			
-			//TODO decode
-			
+			byte[] serverChallenge = Base64.encode(splitResponse[2].getBytes());
+			Key secretKey = MyRandomGenerator.convertSecretKey(splitResponse[3]);
+			AlgorithmParameterSpec iv = MyRandomGenerator.convertIV(splitResponse[4]);
 			
 			if(!responseChallenge.equals(clientChallenge)) {
 				System.out.println("Access denied - server couldn't read your challenge; LOGGING OUT");
 				LOG.info("server couldn't identify client");
 				exitClient();
 			} else {
-				// verify handshake, final step
-				//channel = new RSAChannel(channel, key)
-				
-				
-				channel.send(serverChallenge.getBytes());
+				// initialize AES channel
+				((RSAChannel) channel).setEncryptKeyAES(secretKey, iv);
+				// return server challenge
+				channel.send(serverChallenge);
 			}
-			
-			//TODO return server challenge
-			//TODO initialize AES channel
-			
 		}
 
 		/**

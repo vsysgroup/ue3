@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.Socket;
 import java.security.Key;
 
+import security.MyRandomGenerator;
+
 import communication.Base64Channel;
 import communication.Channel;
 import communication.RSAChannel;
@@ -31,7 +33,13 @@ public class ServerTCPCommunicationThread extends Thread {
 	public void run() {
 		try {
 			this.channel = new RSAChannel(new Base64Channel(new TCPChannel(clientSocket)));
-			((RSAChannel) this.channel).setDecryptKey(serverPrivateKey);
+			if(server.getSecretKeyAndIV() == null) {
+				((RSAChannel) this.channel).setDecryptKey(serverPrivateKey);
+			} else {
+				String secretKey = server.getSecretKeyAndIV()[0];
+				String iv = server.getSecretKeyAndIV()[1];
+				((RSAChannel) channel).setDecryptKeyAES(MyRandomGenerator.convertSecretKey(secretKey), MyRandomGenerator.convertIV(iv));
+			}
 		} catch(IOException e) {
 			exit();
 			return;

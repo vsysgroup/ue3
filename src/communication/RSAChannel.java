@@ -1,9 +1,11 @@
 package communication;
 
 import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.AlgorithmParameterSpec;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -43,6 +45,29 @@ public class RSAChannel extends DecoratorChannel {
 		}
 	}
 	
+	public void setDecryptKeyAES(Key secretKey, AlgorithmParameterSpec iv) {
+		try {
+			this.cipherDecrypt = Cipher.getInstance("AES/CTR/NoPadding");
+			
+			// MODE is the encryption/decryption mode
+			// KEY is either a private, public or secret key
+			// IV is an init vector, needed for AES
+			this.cipherDecrypt.init(Cipher.DECRYPT_MODE, secretKey, iv);			
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidAlgorithmParameterException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public void setEncryptKey(Key encryptKey) {
 		try {
 			this.cipherEncrypt = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
@@ -57,6 +82,28 @@ public class RSAChannel extends DecoratorChannel {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public void setEncryptKeyAES(Key secretKey, AlgorithmParameterSpec iv) {
+		try {
+			this.cipherEncrypt = Cipher.getInstance("AES/CTR/NoPadding");
+			// MODE is the encryption/decryption mode
+			// KEY is either a private, public or secret key
+			// IV is an init vector, needed for AES
+			this.cipherEncrypt.init(Cipher.ENCRYPT_MODE, secretKey, iv);
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidAlgorithmParameterException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -99,4 +146,5 @@ public class RSAChannel extends DecoratorChannel {
 		}
 		return decryptedMsg;
 	}
+
 }

@@ -1,10 +1,16 @@
 package security;
 
+import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.InvalidKeySpecException;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * generates secure numbers and encodes them in base64
@@ -42,6 +48,28 @@ public class MyRandomGenerator {
 		SecretKey key = generator.generateKey();
 		String s = new String(MyBase64.encode(key.getEncoded()));
 		return s;
+	}
+
+	public static Key convertSecretKey(String secretKey) {
+		byte[] key = MyBase64.decode(secretKey);
+		SecretKey finalSecretKey = null;
+		SecretKeySpec keySpec = new SecretKeySpec(key, 0, key.length, "AES");
+		try {
+			SecretKeyFactory keyFac = SecretKeyFactory.getInstance("AES");
+			finalSecretKey = keyFac.generateSecret(keySpec);
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeySpecException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return finalSecretKey;
+	}
+
+	public static AlgorithmParameterSpec convertIV(String initializationVector) {
+		byte[] iv = MyBase64.decode(initializationVector);
+		return new IvParameterSpec(iv); 
 	}
 	
 }

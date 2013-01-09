@@ -137,4 +137,9 @@ public class OutageHandler {
 		}
 		return mean;
 	}
+
+	public void startOutageMode() {
+		// TODO Auto-generated method stub
+		
+	}
 }

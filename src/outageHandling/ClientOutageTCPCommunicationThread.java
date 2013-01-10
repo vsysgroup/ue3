@@ -8,6 +8,7 @@ import communication.Base64Channel;
 import communication.Channel;
 import communication.RSAChannel;
 import communication.TCPChannel;
+import communication.TCPCommunication;
 
 import client.Client;
 
@@ -17,7 +18,7 @@ public class ClientOutageTCPCommunicationThread extends Thread {
 	private Client client;
 	private Key clientPrivateKey;
 	private OutageHandler outageHandler;
-	private Channel channel = null;
+	private TCPCommunication tcpCommunication;
 	
 	public ClientOutageTCPCommunicationThread(Socket socket, Client client, Key clientPrivateKey, OutageHandler outageHandler) {
 		this.socket = socket;
@@ -28,21 +29,19 @@ public class ClientOutageTCPCommunicationThread extends Thread {
 	
 	public void run() {
 		try {
-			this.channel = new RSAChannel(new Base64Channel(new TCPChannel(socket)));
-			((RSAChannel) this.channel).setDecryptKey(clientPrivateKey);
+			this.tcpCommunication = new TCPCommunication(socket);
 		} catch(IOException e) {
 			exit();
 			return;
 		}
 		while(!interrupted() && socket != null){
 			try {
-				byte[] tmp = channel.receive();
-				String receivedMessage = new String(tmp);
+				String receivedMessage = tcpCommunication.receive();
 				if(receivedMessage == "") {
 					exit();
 					break;
 				}
-				outageHandler.receiveMessage(receivedMessage, channel);
+				outageHandler.receiveMessage(receivedMessage, socket);
 			} catch (IOException e) {
 				exit();
 			}

@@ -64,8 +64,10 @@ public class Client {
 	private String clientChallenge;
 
 	private OutageHandler outageHandler;
+	private boolean outageMode = false;
 	
 	private Semaphore semaphore = new Semaphore(0);
+	
 
 	public static void main(String[] args) {
 
@@ -264,7 +266,6 @@ public class Client {
 						return;
 					}
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -273,7 +274,7 @@ public class Client {
 
 		clientChallenge = MyRandomGenerator.createChallenge();
 		//		byte[] testNumber = MyBase64.decode(clientChallenge);
-		String msg = "!login" + " " + username + " " + serverTCPPort + " " + clientChallenge;
+		String msg = "!login" + " " + username + " " + clientPort + " " + clientChallenge;
 		// message encrypted using RSA initialized with the public key of the auction server
 		// encode overall msg in base64
 		channel.send(msg.getBytes());	
@@ -598,7 +599,12 @@ public class Client {
 	 * @param amount
 	 */
 	public void placeBid(int ID, double amount) {
-		channel.send(("!bid" + " " + username + " " + ID + " " + amount).getBytes());
+		if(outageMode) {
+			outageHandler.sendTimestampRequest("!getTimeStamp" + " " + ID + " " + amount);
+		} else {
+			channel.send(("!bid" + " " + username + " " + ID + " " + amount).getBytes());
+		}
+		
 	}
 	
 	/**
@@ -635,7 +641,7 @@ public class Client {
 		String output = "";
 
 		for(int i = 1; i<splitString.length; i++){
-			if(splitString[i].equals("-|-")) {
+			if(splitString[i].equals("EndLinE")) {
 				output += "\n";
 			} else {
 				output += splitString[i];
@@ -705,6 +711,15 @@ public class Client {
 	public boolean getLoggedIn() {
 		return loggedIn;
 	}
+	
+	public boolean getOutageMode() {
+		return outageMode;
+	}
+	
+	public void setOutageMode(boolean outageMode) {
+		this.outageMode = outageMode;
+	}
+
 
 	/**
 	 * Closes the client and logs the user out. Also closes the socket and all communications.
@@ -761,12 +776,17 @@ public class Client {
 	 * @return null if client is not known yet, private key otherwise
 	 * @throws IOException
 	 */
-	public Key getOwnPrivateKey() throws IOException {
+	public Key getOwnPrivateKey() {
 		return clientPrivateKey;
 	}
 
 	public void startOutageMode() {
+		setOutageMode(true);
 		outageHandler.startOutageMode();
 
+	}
+	
+	public int getClientPort() {
+		return clientPort;
 	}
 }

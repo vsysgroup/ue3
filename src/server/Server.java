@@ -253,6 +253,7 @@ public class Server {
 				currentUser = new User(username);
 				currentUser.setPort(tcpPort);	
 				currentUser.setChannel(channel);
+				currentUser.setAddress(commSession.getUserAddress());
 				try {
 					currentUser.setKey(integrityManager.getSecretKey(username));
 				} catch (IOException e1) {
@@ -719,7 +720,7 @@ public class Server {
 				highestBidderName = highestBidder.getUsername();
 			}
 			list += ID + ". " + "'" + description + "'" + " " + owner + " " + endDate + " " + highestBid + " " + highestBidderName;
-			list += " -|- ";
+			list += " EndLinE ";
 		}
 		list = list.trim();
 		return list;

@@ -65,11 +65,12 @@ public class OutageHandler {
 	}
 	
 	public void buildClientListClientSide(String[] splitString) {
+		
 		String output = "";
 				
-		for(int i = 1; i<splitString.length; i++){
+		for(int i = 1; i<splitString.length-1; i++){
 			if(splitString[i].equals("EndLinE")) {
-				output += "\n";
+				output += "\n ";
 			} else {
 				output += splitString[i];
 				output += " ";
@@ -77,14 +78,22 @@ public class OutageHandler {
 		}
 		output.trim();
 		
+		clientList = new ArrayList<OutageUser>();
+		
 		String[] tmpSplitString = output.split(" ");
-		for(int i = 0; i < tmpSplitString.length-5; i+=5) {
+		for(int i = 0; i < tmpSplitString.length-2; i+=5) {
 			String username = tmpSplitString[i];
 			String address = tmpSplitString[i+1];
 			int port = Integer.parseInt( tmpSplitString[i+2]);
 			boolean loggedIn = Boolean.parseBoolean( tmpSplitString[i+3]);
+			OutageUser knownUser = findUser(username);
+			
 			OutageUser newOutageUser = new OutageUser(username, address, port, loggedIn);
+			
+			
 			clientList.add(newOutageUser);
+			
+			
 		}
 		
 		clients = output;
@@ -93,6 +102,7 @@ public class OutageHandler {
 	public String buildClientListServerSide() {
 		String clientList = "";
 		ArrayList<User> users = server.getUsers();
+				
 		Iterator<User> iter = users.iterator(); 
 		while(iter.hasNext()) {
 			User currentUser = iter.next();
@@ -104,6 +114,7 @@ public class OutageHandler {
 			clientList += username + " " + address + " " + port + " " + loggedIn;
 			clientList += " EndLinE ";
 		}
+		
 		return clientList;
 	}
 	
@@ -129,6 +140,7 @@ public class OutageHandler {
 		while(iter.hasNext()) {
 			OutageUser currentUser = iter.next();
 			printableList += currentUser.toString();
+			printableList += "\n";
 		}
 		return printableList;
 	}
@@ -247,5 +259,17 @@ public class OutageHandler {
 		out1.println(message);
 		out2.println(message);
 		
+	}
+	
+	public OutageUser findUser(String name) {
+		Iterator<OutageUser> iter = clientList.iterator();
+		OutageUser currentUser = null;
+		while(iter.hasNext()) {
+			currentUser = iter.next();
+			if(currentUser.getUsername().equals(name)){
+				return currentUser;
+			}
+		}
+		return currentUser;
 	}
 }

@@ -8,10 +8,10 @@ public class OutageUser {
 	private boolean loggedIn;
 	
 	public OutageUser(String username, String address, int port, boolean loggedIn) {
-		this.setUsername(username);
-		this.setAddress(address);
-		this.setPort(port);
-		this.setLoggedIn(loggedIn);
+		this.username = username;
+		this.address = address;
+		this.port = port;
+		this.loggedIn = loggedIn;
 	}
 
 	public String getUsername() {

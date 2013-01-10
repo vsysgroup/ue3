@@ -70,7 +70,7 @@ public class Auction {
 		return this.ID;
 	}
 	
-	synchronized public void newBid(User bidder, double amount, Channel responseMsg, boolean isGroupBid) {
+	synchronized public void newBid(User bidder, double amount, Channel channel, boolean isGroupBid) {
 		if(!bidders.contains(bidder)) {
 			bidders.add(bidder);
 			if(amount > highestBid) {
@@ -78,14 +78,14 @@ public class Auction {
 				User previousHighest = highestBidder;
 				highestBidder = bidder;
 				this.isGroupBidActive = isGroupBid;
-				server.bidSuccessful(bidder, amount, description, ID, responseMsg);
+				server.bidSuccessful(bidder, amount, description, ID, channel);
 				if(previousHighest != null) {
-					server.userOverbid(previousHighest, amount, description, ID, responseMsg);
+					server.userOverbid(previousHighest, amount, description, ID, channel);
 				}
 				
 			}
 			else {
-				server.bidUnsuccessful(bidder, amount, highestBid, description, responseMsg);
+				server.bidUnsuccessful(bidder, amount, highestBid, description, channel);
 			}
 		}
 		else {
@@ -95,11 +95,11 @@ public class Auction {
 				highestBidder = bidder;
 				this.isGroupBidActive = isGroupBid;
 				if(previousHighest != null) {
-					server.userOverbid(previousHighest, amount, description, ID, responseMsg);
+					server.userOverbid(previousHighest, amount, description, ID, channel);
 				}
 			}
 			else{
-				server.bidUnsuccessful(bidder, amount, highestBid, description, responseMsg);
+				server.bidUnsuccessful(bidder, amount, highestBid, description, channel);
 			}
 		}
 	}

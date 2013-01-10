@@ -23,7 +23,7 @@ public class AuctionCheckThread extends Thread {
 			for(int i = 0; i < auctions.size(); i++) {
 				Auction currentAuction = auctions.get(i);
 				if(currentAuction.getEndDate().before(date)) {
-					server.auctionEnded(currentAuction);
+//					server.auctionEnded(currentAuction);
 					auctions.remove(i);
 				}
 			}

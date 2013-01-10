@@ -1,7 +1,6 @@
 package server;
 
 import java.util.ArrayList;
-import java.util.Date;
 
 public class GroupBid {
 	
@@ -9,22 +8,16 @@ public class GroupBid {
 	
 	int auctionID;
 	
-	Double amount;
+	double amount;
 	
 	private ArrayList<User> confirmers = new ArrayList<User>();
-
 	
-	
-	
-	
-	public GroupBid(User bidder, int auctionID, Double amount) {
+	public GroupBid(User bidder, int auctionID, double amount) {
 		super();
 		this.bidder = bidder;
 		this.auctionID = auctionID;
 		this.amount = amount;
 	}
-	
-	
 
 	public User getBidder() {
 		return bidder;
@@ -56,6 +49,10 @@ public class GroupBid {
 
 	public void setConfirmers(ArrayList<User> confirmers) {
 		this.confirmers = confirmers;
+	}
+
+	public void addConfirmer(User confirmer) {
+		confirmers.add(confirmer);
 	}
 	
 	

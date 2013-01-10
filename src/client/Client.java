@@ -65,8 +65,9 @@ public class Client {
 
 	private OutageHandler outageHandler;
 	private boolean outageMode = false;
+	private boolean sleep = false;
 	
-	private Semaphore semaphore = new Semaphore(0);
+	private static Semaphore semaphore = new Semaphore(0);
 	
 
 	public static void main(String[] args) {
@@ -150,7 +151,7 @@ public class Client {
 
 
 
-			while(clientStatus && getLoggedIn() && in.hasNext()){
+			while(clientStatus && getLoggedIn() && in.hasNext() && !sleep){
 				if(!loggedIn) {
 					break;
 				}
@@ -191,7 +192,7 @@ public class Client {
 					} catch(NumberFormatException e) {
 						System.out.println("One of the parameters is wrong.");
 					}
-					Sleep();
+					sleep();
 					continue;
 				}
 				else if(input[0].equals("!create") && input.length >= 3) {
@@ -222,6 +223,10 @@ public class Client {
 					continue;
 				}
 			}
+			
+			while(sleep) {
+				//listen for no keyboard commands
+			}
 		}
 		if(!test) {
 			exitClient();
@@ -229,17 +234,19 @@ public class Client {
 	}
 
 
-	private void Sleep() {
-		try {
-			semaphore.acquire();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	private void sleep() {
+		sleep = true;
+//		try {
+//			semaphore.acquire();
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 	}
 	
-	private void WakeUp() {
-		semaphore.release();		
+	private void wakeUp() {
+		sleep = false;
+//		semaphore.release();		
 	}
 
 	private void listWhileNotLoggedIn() {
@@ -312,27 +319,6 @@ public class Client {
 		String response = message;
 		String[] splitResponse = response.split(" ");
 
-		//part of handshake
-		if(splitResponse[0].equals("!ok")) {
-			//syntax: !ok <client-challenge> <server-challenge> <secret-key> <iv-parameter>
-			String responseChallenge = splitResponse[1];
-			String serverChallenge = splitResponse[2];
-			Key secretKey = MyRandomGenerator.convertSecretKey(splitResponse[3]);
-			AlgorithmParameterSpec iv = MyRandomGenerator.convertIV(splitResponse[4]);
-
-			if(!responseChallenge.equals(clientChallenge)) {
-				System.out.println("Access denied - server couldn't read your challenge; LOGGING OUT");
-				LOG.info("server couldn't identify client");
-				exitClient();
-			} else {
-				// initialize AES channel
-				((RSAChannel) channel).setEncryptKeyAES(secretKey, iv);
-				((RSAChannel) channel).setDecryptKeyAES(secretKey, iv);
-				// return server challenge
-				channel.send(serverChallenge.getBytes());
-			}
-		}
-
 		/**
 		 * accepts the following responses:
 		 * login failed
@@ -348,12 +334,34 @@ public class Client {
 				setUsername(splitResponse[2]);
 				setLoggedIn();
 				//TODO save private key in field
+			} else {
+				System.out.println("login");
 			}
 			//verify Message
 			boolean	verified = verifyMessage(message, splitResponse);
 			if(!verified) {
 				requestRepetition();
 			}
+		}
+		else if(splitResponse[0].equals("!ok")) {
+			//syntax: !ok <client-challenge> <server-challenge> <secret-key> <iv-parameter>
+			String responseChallenge = splitResponse[1];
+			String serverChallenge = splitResponse[2];
+			Key secretKey = MyRandomGenerator.convertSecretKey(splitResponse[3]);
+			AlgorithmParameterSpec iv = MyRandomGenerator.convertIV(splitResponse[4]);
+			
+			if(!responseChallenge.equals(clientChallenge)) {
+				System.out.println("Access denied - server couldn't read your challenge; LOGGING OUT");
+				LOG.info("server couldn't identify client");
+				exitClient();
+			} else {
+				// initialize AES channel
+				((RSAChannel) channel).setEncryptKeyAES(secretKey, iv);
+				((RSAChannel) channel).setDecryptKeyAES(secretKey, iv);
+				// return server challenge
+				channel.send(serverChallenge.getBytes());
+			}
+			
 		}
 
 		/**
@@ -452,6 +460,10 @@ public class Client {
 						+ splitResponse[4] + " "
 						+ splitResponse[5] + ".");
 			}
+			else {
+				System.out.println(message);
+			}
+			
 			//verify Message
 			boolean	verified = verifyMessage(message, splitResponse);
 			if(!verified) {
@@ -549,12 +561,15 @@ public class Client {
 			System.out.println(outageHandler.getPrintableClientList());
 		}
 		else if(splitResponse[0].equals("!confirmed")) {
-			System.out.println("confirmed");
-			WakeUp();
+			System.out.println("confirmed groupBid successful");
+			wakeUp();
 		}
 		else if(splitResponse[0].equals("!rejected")) {
 			System.out.println("rejected");
-			WakeUp();
+			wakeUp();
+		}
+		else {
+			System.out.println(message);
 		}
 	}
 
@@ -617,7 +632,7 @@ public class Client {
 	}
 	
 	/**
-	 * Sends message to the server to place a bid on an item.
+	 * 
 	 * @param ID
 	 * @param amount
 	 */

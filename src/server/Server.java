@@ -359,13 +359,13 @@ public class Server {
 			String endDate = newAuction.dateToString();
 			int ID = newAuction.getID();
 
-			if(analyticsHandler != null) {
-				try {
-					analyticsHandler.processEvent(new AuctionEvent("AUCTION_STARTED", (long) ID));
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			}
+//			if(analyticsHandler != null) {
+//				try {
+//					analyticsHandler.processEvent(new AuctionEvent("AUCTION_STARTED", (long) ID));
+//				} catch (RemoteException e) {
+//					e.printStackTrace();
+//				}
+//			}
 
 			//add hashed MAC to the message
 			Key key = user.getKey();
@@ -439,7 +439,7 @@ public class Server {
 		if(input[0].equals("!bid")) {
 			String username = input[1];
 			User user = findUser(username);
-			findAuctionByID(input[2]).newBid(user, Double.parseDouble(input[3]), channel, false);
+			findAuctionByID(Integer.parseInt(input[2])).newBid(user, Double.parseDouble(input[3]), channel, false);
 		}
 		
 		if(input[0].equals("!groupBid")) {
@@ -506,8 +506,7 @@ public class Server {
 	 * @param IDString
 	 * @return Auction
 	 */
-	private Auction findAuctionByID(String IDString) {
-		int ID = Integer.parseInt(IDString);
+	public Auction findAuctionByID(int ID) {
 		for(int i = 0; i < auctions.size(); i++) {
 			if(auctions.get(i).getID() == ID) {
 				return auctions.get(i);
@@ -587,7 +586,7 @@ public class Server {
 	 * @param amountHighestBid
 	 * @param description
 	 */
-	public void bidUnsuccessful(User bidder, double amountBid, double amountHighestBid, String description, Channel responseMsg) {
+	public void bidUnsuccessful(User bidder, double amountBid, double amountHighestBid, String description, Channel channel) {
 
 		//add hashed MAC to the message
 		Key key = bidder.getKey();
@@ -603,7 +602,7 @@ public class Server {
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}	
-		responseMsg.send(returnMessage.getBytes());
+		channel.send(returnMessage.getBytes());
 	}
 
 	/**
@@ -621,7 +620,7 @@ public class Server {
 		auctions.add(auction);
 		return auction;
 	}
-
+	
 	/**
 	 * returns all currently running auctions
 	 * @return
@@ -634,50 +633,50 @@ public class Server {
 	 * When an auction ends, this method sends out notifications to all Users who have taken part in the auction
 	 * @param currentAuction
 	 */
-	public void auctionEnded(Auction currentAuction) {
-		ArrayList<User> bidders = currentAuction.getBidders();
-		User winner = currentAuction.getWinner();
-		double winningBid = currentAuction.getWinningBid();
-		String description = currentAuction.getDescription();
-
-		try {
-			if(analyticsHandler != null) {
-				analyticsHandler.processEvent(new AuctionEvent("AUCTION_ENDED", (long) currentAuction.getID()));
-			}
-			//register new bill for auction owner on billingServer
-			if(loginHandler != null) {
-				billingHandler = loginHandler.login("auctionClientUser", "dslab2012");
-				if (billingHandler != null) {
-					billingHandler.billAuction(currentAuction.getOwner().getUsername(), currentAuction.getID(), winningBid);
-				} else {
-					LOG.error("Login to AuctionServer with user " + currentAuction.getOwner().getUsername() + " failed.");
-				}
-			}
-
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
-		if(winner != null) {
-			try {
-				if(analyticsHandler != null) {
-					analyticsHandler.processEvent(new BidEvent("BID_WON", winner.getUsername(), (long) currentAuction.getID(), winningBid));
-				}
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-		}
-
-		for(int i = 0; i < bidders.size(); i++) {
-			if(!bidders.get(i).isLoggedIn()) {
-				if(bidders.get(i).getUsername().equals(winner.getUsername())) {
-					bidders.get(i).addMessage("!auction-ended" + " " + "You"  + " " + winningBid  + " " + description);
-				}
-				else {
-					bidders.get(i).addMessage("!auction-ended"  + " " + winner.getUsername()  + " " + winningBid + " " + description);
-				}
-			}
-		}
-	}
+//	public void auctionEnded(Auction currentAuction) {
+//		ArrayList<User> bidders = currentAuction.getBidders();
+//		User winner = currentAuction.getWinner();
+//		double winningBid = currentAuction.getWinningBid();
+//		String description = currentAuction.getDescription();
+//
+//		try {
+//			if(analyticsHandler != null) {
+//				analyticsHandler.processEvent(new AuctionEvent("AUCTION_ENDED", (long) currentAuction.getID()));
+//			}
+//			//register new bill for auction owner on billingServer
+//			if(loginHandler != null) {
+//				billingHandler = loginHandler.login("auctionClientUser", "dslab2012");
+//				if (billingHandler != null) {
+//					billingHandler.billAuction(currentAuction.getOwner().getUsername(), currentAuction.getID(), winningBid);
+//				} else {
+//					LOG.error("Login to AuctionServer with user " + currentAuction.getOwner().getUsername() + " failed.");
+//				}
+//			}
+//
+//		} catch (RemoteException e) {
+//			e.printStackTrace();
+//		}
+//		if(winner != null) {
+//			try {
+//				if(analyticsHandler != null) {
+//					analyticsHandler.processEvent(new BidEvent("BID_WON", winner.getUsername(), (long) currentAuction.getID(), winningBid));
+//				}
+//			} catch (RemoteException e) {
+//				e.printStackTrace();
+//			}
+//		}
+//
+//		for(int i = 0; i < bidders.size(); i++) {
+//			if(!bidders.get(i).isLoggedIn()) {
+//				if(bidders.get(i).getUsername().equals(winner.getUsername())) {
+//					bidders.get(i).addMessage("!auction-ended" + " " + "You"  + " " + winningBid  + " " + description);
+//				}
+//				else {
+//					bidders.get(i).addMessage("!auction-ended"  + " " + winner.getUsername()  + " " + winningBid + " " + description);
+//				}
+//			}
+//		}
+//	}
 
 	/**
 	 * builds a list of all auctions

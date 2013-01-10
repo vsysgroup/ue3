@@ -27,7 +27,7 @@ public class GroupBidManager {
 		if(getAuctionByID(auctionID) != null) {
 			GroupBid bid = new GroupBid(bidder, auctionID, amount);
 			boolean addSuccess = potentialGroupBids.add(bid);
-			bidder.getChannel().send("create group bid successful".getBytes());
+			bidder.getChannel().send("create group bid successful; 2 others need to confirm: !confirm <auctionID> <amount> <ownerName>".getBytes());
 		} else {
 			bidder.getChannel().send("create group bid not successful".getBytes());
 		}

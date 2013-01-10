@@ -1,8 +1,14 @@
 package outageHandling;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -18,6 +24,7 @@ import org.bouncycastle.util.encoders.Base64;
 import communication.Channel;
 
 import server.Server;
+import server.ServerTCPListenerThread;
 import server.User;
 import client.Client;
 
@@ -27,13 +34,34 @@ public class OutageHandler {
 	private Server server;
 	private String clients;
 	private ArrayList<OutageUser> clientList = new ArrayList<OutageUser>();
+	private ArrayList<OutageUser> chosenClients = new ArrayList<OutageUser>();
+	private ArrayList<Long> timeStamps = new ArrayList<Long>();
+	
+	private Socket socket1;
+	private Socket socket2;
+	
+	private ServerSocket serverSocket;
+	
+	private BufferedReader in1 = null;
+	private PrintWriter out1 = null;
+	
+	private BufferedReader in2 = null;
+	private PrintWriter out2 = null;
+	
+	private ClientOutageTCPListenerThread clientOutageTCPListenerThread;
 	
 	public OutageHandler(Client client) {
 		this.client = client;
+		try {
+			this.serverSocket = new ServerSocket(client.getClientPort());
+		} catch (IOException e) {
+			System.out.println("creation of client's serverSocket failed");
+			e.printStackTrace();
+		}
 	}
 	
 	public OutageHandler(Server server) {
-		this.server = server;;	
+		this.server = server;	
 	}
 	
 	public void buildClientListClientSide(String[] splitString) {
@@ -122,8 +150,6 @@ public class OutageHandler {
 				signedMessage = message + " " + append;
 			} catch (InvalidKeyException e) {
 				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
 			} catch (SignatureException e) {
 				e.printStackTrace();
 			}
@@ -157,12 +183,12 @@ public class OutageHandler {
 	}
 
 	public void startOutageMode() {
-		// TODO Auto-generated method stub
-		
+		chooseClients();
+		clientOutageTCPListenerThread = new ClientOutageTCPListenerThread(serverSocket, client, client.getOwnPrivateKey(), this);
+		clientOutageTCPListenerThread.start();
 	}
 
-	//TODO Implement
-	public void receiveMessage(String message, Channel channel) {
+	public void receiveMessage(String message, Socket returnSocket) {
 		String[] input = message.split(" ");
 		
 		//!getTimestamp <auctionID> <price>
@@ -173,8 +199,53 @@ public class OutageHandler {
 			String returnMessage =	"!timestamp" + " " + auctionID + " " + price + " " + getTimeStamp();	
 			returnMessage = signMessage(returnMessage);
 			
-			
+			try {
+				PrintWriter tmpOut = new PrintWriter(returnSocket.getOutputStream(), true);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
+		if(input[0].equals("!timestamp")) {
+			//TODO react to !timestamp response, extract signatues and save them
+		}
+		
+	}
+	
+	public void chooseClients() {
+		Iterator<OutageUser> iter = clientList.iterator();
+		int chosen = 0;
+		while(iter.hasNext() && chosen < 2) {
+			OutageUser currentUser = iter.next();
+			if(currentUser.isLoggedIn()) {
+				chosenClients.add(currentUser);
+				chosen++;
+			}
+		}
+	}
+	
+	public void sendTimestampRequest(String message) {
+		try {
+			socket1 = new Socket(chosenClients.get(0).getAddress(), chosenClients.get(0).getPort());
+			in1 = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
+			out1 = new PrintWriter(socket1.getOutputStream(), true);
+			
+		} catch (UnknownHostException e) {
+			System.out.println("Connection to Client 1 could not be established - Unknown Host");
+		} catch (IOException e) {
+			System.out.println("Connection to Client 1 could not be established - IOException");
+		}
+		try {
+			socket2 = new Socket(chosenClients.get(1).getAddress(), chosenClients.get(1).getPort());
+			in1 = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
+			out1 = new PrintWriter(socket1.getOutputStream(), true);
+		} catch (UnknownHostException e) {
+			System.out.println("Connection to Client 2 could not be established - Unknown Host");
+		} catch (IOException e) {
+			System.out.println("Connection to Client 2 could not be established - IOException");
+		}
+		
+		out1.println(message);
+		out2.println(message);
 		
 	}
 }

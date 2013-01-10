@@ -237,6 +237,9 @@ public class Client {
 			}
 			
 			while(sleep) {
+				if(in.hasNext()) {
+					in.next();
+				}
 				//listen for no keyboard commands
 			}
 		}

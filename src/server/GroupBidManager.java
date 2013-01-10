@@ -30,7 +30,7 @@ public class GroupBidManager {
 				bidder.getChannel().send("!rejected Please use higher bid price".getBytes());
 			} else {
 				boolean addSuccess = potentialGroupBids.add(bid);
-				bidder.getChannel().send("create group bid successful; 2 others need to confirm: !confirm <auctionID> <amount> <ownerName>".getBytes());
+				bidder.getChannel().send("groupBidAccepted: create group bid successful; 2 others need to confirm: !confirm <auctionID> <amount> <ownerName>".getBytes());
 			}
 		} else {
 			bidder.getChannel().send("create group bid not successful".getBytes());

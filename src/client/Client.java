@@ -241,7 +241,7 @@ public class Client {
 
 		clientChallenge = MyRandomGenerator.createChallenge();
 		//		byte[] testNumber = MyBase64.decode(clientChallenge);
-		String msg = "!login" + " " + username + " " + serverTCPPort + " " + clientChallenge;
+		String msg = "!login" + " " + username + " " + clientPort + " " + clientChallenge;
 		// message encrypted using RSA initialized with the public key of the auction server
 		// encode overall msg in base64
 		channel.send(msg.getBytes());	

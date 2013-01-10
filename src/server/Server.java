@@ -60,8 +60,12 @@ public class Server {
 	private ServerTCPListenerThread serverTCPListenerThread = null;
 	private AuctionCheckThread auctionCheckThread = null;
 	private ServerSocket serverSocket = null;
+	
 	private ArrayList<User> users = new ArrayList<User>();
-	private static List<Auction> auctions = Collections.synchronizedList(new ArrayList());
+	
+	private static List<Auction> auctions = Collections.synchronizedList(new ArrayList());	
+	
+	
 	private Scanner in = new Scanner(System.in);
 
 	private static AnalyticsServerInterface analyticsHandler = null;
@@ -76,13 +80,11 @@ public class Server {
 	private KeyReader keyReader;
 
 
-
-
-
-
-
-
 	private OutageHandler outageHandler;
+	
+	
+	private GroupBidManager groupBidManager;
+	
 
 	public static void main(String[] args) {
 
@@ -128,6 +130,7 @@ public class Server {
 					System.out.println("Wrong password - try again");			
 				}				
 			}
+			groupBidManager = new GroupBidManager(this, auctions);
 		}
 
 		System.out.println("Starting Server.");
@@ -171,7 +174,8 @@ public class Server {
 		String[] input = message.split(" ");
 
 		// only login the user if the response on the server challenge was correct
-		if ((commSession.getCurrentUser() != null) && (commSession.getCurrentUser().getServerChallenge() != null)) {				
+		if ((commSession.getCurrentUser() != null) && (commSession.getCurrentUser().getServerChallenge() != null)) {	
+			
 			if (input[0].equals(commSession.getCurrentUser().getServerChallenge())) {
 				commSession.getCurrentUser().logIn();
 				commSession.getCurrentUser().setServerChallenge(null);	
@@ -248,6 +252,7 @@ public class Server {
 			if(!userKnown(username)) { // new user
 				currentUser = new User(username);
 				currentUser.setPort(tcpPort);	
+				currentUser.setChannel(channel);
 				try {
 					currentUser.setKey(integrityManager.getSecretKey(username));
 				} catch (IOException e1) {
@@ -448,7 +453,21 @@ public class Server {
 		if(input[0].equals("!bid")) {
 			String username = input[1];
 			User user = findUser(username);
-			findAuctionByID(input[2]).newBid(user, Double.parseDouble(input[3]), channel);
+			findAuctionByID(input[2]).newBid(user, Double.parseDouble(input[3]), channel, false);
+		}
+		
+		if(input[0].equals("!groupBid")) {
+			String username = input[1];
+			User user = findUser(username);
+			// channel.send(("!groupBid" + " " + username + " " + ID + " " + amount).getBytes());
+			groupBidManager.AddNewPotentialGroupBid(user, Integer.parseInt(input[2]), Double.parseDouble(input[3]));			
+		}
+		
+		if(input[0].equals("!confirm")) {
+			String username = input[1];
+			User user = findUser(username);
+			// channel.send(("!confirm" + " " + username + " " + ID + " " + amount + " " + owner).getBytes());
+			groupBidManager.AddConfirmation(user, Integer.parseInt(input[2]), Double.parseDouble(input[3]));			
 		}
 
 		/**

@@ -19,12 +19,17 @@ public class Auction {
 	private Date endDate;
 	private User owner;
 	private String description;
+	
 	private ArrayList<User> bidders = new ArrayList<User>();
 	public double highestBid = 0;
 	public User highestBidder = null;
 	public Server server = null;
 	
 	private long creationTime = 0;
+	
+	
+	private ArrayList<User> confirmers = new ArrayList<User>();
+	private boolean isGroupBidActive = false;
 	
 	public Auction(Date endDate, User owner, String description, Server server) {
 		
@@ -65,13 +70,14 @@ public class Auction {
 		return this.ID;
 	}
 	
-	synchronized public void newBid(User bidder, double amount, Channel responseMsg) {
+	synchronized public void newBid(User bidder, double amount, Channel responseMsg, boolean isGroupBid) {
 		if(!bidders.contains(bidder)) {
 			bidders.add(bidder);
 			if(amount > highestBid) {
 				highestBid = amount;
 				User previousHighest = highestBidder;
 				highestBidder = bidder;
+				this.isGroupBidActive = isGroupBid;
 				server.bidSuccessful(bidder, amount, description, ID, responseMsg);
 				if(previousHighest != null) {
 					server.userOverbid(previousHighest, amount, description, ID, responseMsg);
@@ -87,6 +93,7 @@ public class Auction {
 				highestBid = amount;
 				User previousHighest = highestBidder;
 				highestBidder = bidder;
+				this.isGroupBidActive = isGroupBid;
 				if(previousHighest != null) {
 					server.userOverbid(previousHighest, amount, description, ID, responseMsg);
 				}
@@ -137,4 +144,24 @@ public class Auction {
 		return creationTime;
 	}
 	
+	public ArrayList<User> getConfirmers() {
+		return confirmers;
+	}
+
+	public void setConfirmers(ArrayList<User> confirmers) {
+		this.confirmers = confirmers;
+	}	
+	
+	public void addConfirmer(User confirmer) {
+		this.confirmers.add(confirmer);
+	}
+
+	public boolean isGroupBidActive() {
+		return isGroupBidActive;
+	}
+
+	public void setGroupBidActive(boolean isGroupAuction) {
+		this.isGroupBidActive = isGroupAuction;
+	}
+
 }

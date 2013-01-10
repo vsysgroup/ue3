@@ -13,6 +13,7 @@ import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.Scanner;
+import java.util.concurrent.Semaphore;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
@@ -63,6 +64,8 @@ public class Client {
 	private String clientChallenge;
 
 	private OutageHandler outageHandler;
+	
+	private Semaphore semaphore = new Semaphore(0);
 
 	public static void main(String[] args) {
 
@@ -172,6 +175,23 @@ public class Client {
 					}
 					continue;
 				}
+				else if(input[0].equals("!groupBid") && input.length == 3) {
+					try {
+						placeGroupBid(Integer.parseInt(input[1]), Double.valueOf(input[2]));
+					} catch(NumberFormatException e) {
+						System.out.println("One of the parameters is wrong.");
+					}
+					continue;
+				}
+				else if(input[0].equals("!confirm") && input.length == 4) {
+					try {
+						confirm(Integer.parseInt(input[1]), Double.valueOf(input[2]), input[3]);
+					} catch(NumberFormatException e) {
+						System.out.println("One of the parameters is wrong.");
+					}
+					Sleep();
+					continue;
+				}
 				else if(input[0].equals("!create") && input.length >= 3) {
 					try {
 						String description = "";
@@ -207,6 +227,18 @@ public class Client {
 	}
 
 
+	private void Sleep() {
+		try {
+			semaphore.acquire();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	private void WakeUp() {
+		semaphore.release();		
+	}
 
 	private void listWhileNotLoggedIn() {
 		channel.send("!list".getBytes());
@@ -515,8 +547,14 @@ public class Client {
 			outageHandler.buildClientListClientSide(splitResponse);
 			System.out.println(outageHandler.getPrintableClientList());
 		}
-
-
+		else if(splitResponse[0].equals("!confirmed")) {
+			System.out.println("confirmed");
+			WakeUp();
+		}
+		else if(splitResponse[0].equals("!rejected")) {
+			System.out.println("rejected");
+			WakeUp();
+		}
 	}
 
 
@@ -561,6 +599,24 @@ public class Client {
 	 */
 	public void placeBid(int ID, double amount) {
 		channel.send(("!bid" + " " + username + " " + ID + " " + amount).getBytes());
+	}
+	
+	/**
+	 * Sends message to the server to place a bid on an item.
+	 * @param ID
+	 * @param amount
+	 */
+	public void placeGroupBid(int ID, double amount) {
+		channel.send(("!groupBid" + " " + username + " " + ID + " " + amount).getBytes());
+	}
+	
+	/**
+	 * Sends message to the server to place a bid on an item.
+	 * @param ID
+	 * @param amount
+	 */
+	public void confirm(int ID, double amount, String owner) {
+		channel.send(("!confirm" + " " + username + " " + ID + " " + amount + " " + owner).getBytes());
 	}
 
 	/**

@@ -4,6 +4,8 @@ import java.net.InetAddress;
 import java.security.Key;
 import java.util.ArrayList;
 
+import communication.Channel;
+
 /**
  * Represents a user.
  * @author Philipp Pfeiffer 0809357
@@ -18,6 +20,7 @@ public class User {
 	private String lastMessage;
 	private String address;
 	private int port;
+	private Channel channel;
 	
 	private String serverChallenge = null;
 	
@@ -97,6 +100,14 @@ public class User {
 
 	public void setServerChallenge(String serverChallenge) {
 		this.serverChallenge = serverChallenge;
+	}
+
+	public Channel getChannel() {
+		return channel;
+	}
+
+	public void setChannel(Channel channel) {
+		this.channel = channel;
 	}
 
 }

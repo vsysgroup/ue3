@@ -27,11 +27,10 @@ public class ClientOutageTCPListenerThread extends Thread{
 	
 	public void run() {
 		Socket socket = null;
-		
 		while(!interrupted() && client.getClientStatus()) {
 			try {
 				socket = serverSocket.accept();
-				new ClientOutageTCPCommunicationThread(socket, client, clientPrivateKey, outageHandler);
+				new ClientOutageTCPCommunicationThread(socket, client, clientPrivateKey, outageHandler).start();
 				otherClientSockets.add(socket);
 			} catch(IOException e) {
 				exit();

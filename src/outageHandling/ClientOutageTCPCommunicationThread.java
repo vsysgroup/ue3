@@ -35,12 +35,9 @@ public class ClientOutageTCPCommunicationThread extends Thread {
 			return;
 		}
 		while(!interrupted() && socket != null){
+			System.out.println("entered while loop");
 			try {
 				String receivedMessage = tcpCommunication.receive();
-				if(receivedMessage == "") {
-					exit();
-					break;
-				}
 				outageHandler.receiveMessage(receivedMessage, socket);
 			} catch (IOException e) {
 				exit();

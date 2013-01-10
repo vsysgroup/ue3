@@ -65,7 +65,10 @@ public class Client {
 
 	private OutageHandler outageHandler;
 	private boolean outageMode = false;
+
 	private boolean sleep = false;
+
+	private boolean clientListRequested;
 	
 	private static Semaphore semaphore = new Semaphore(0);
 	
@@ -215,7 +218,15 @@ public class Client {
 				}
 				else if(input[0].equals("!getClientList")) {
 					requestClientList();
+					clientListRequested = true;
+					
 					continue;
+				}
+				else if(input[0].equals("!getTimeStamp")) {
+					outageHandler.sendTimestampRequest("!getTimestamp" + " " + "0" + " " + "50");
+				}
+				else if(input[0].equals("!startOutageMode")) {
+					startOutageMode();
 				}
 				else {
 					System.out.println("Wrong command or wrong parameters. Only the following commands are allowed:");
@@ -342,6 +353,8 @@ public class Client {
 			if(!verified) {
 				requestRepetition();
 			}
+			
+			requestClientList();
 		}
 		else if(splitResponse[0].equals("!ok")) {
 			//syntax: !ok <client-challenge> <server-challenge> <secret-key> <iv-parameter>
@@ -558,7 +571,10 @@ public class Client {
 		 */
 		else if(splitResponse[0].equals("!clientList")) {
 			outageHandler.buildClientListClientSide(splitResponse);
-			System.out.println(outageHandler.getPrintableClientList());
+			if(clientListRequested) {
+				System.out.println(outageHandler.getPrintableClientList());
+				clientListRequested = false;
+			}
 		}
 		else if(splitResponse[0].equals("!confirmed")) {
 			System.out.println("confirmed groupBid successful");

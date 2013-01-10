@@ -582,7 +582,7 @@ public class Client {
 			wakeUp();
 		}
 		else if(splitResponse[0].equals("!rejected")) {
-			System.out.println("rejected");
+			System.out.println("rejected: (" + message + ")");
 			wakeUp();
 		}
 		else {

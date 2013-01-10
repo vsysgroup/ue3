@@ -27,7 +27,7 @@ public class GroupBidManager {
 		if(getAuctionByID(auctionID) != null) {
 			GroupBid bid = new GroupBid(bidder, auctionID, amount);
 			if(getAuctionByID(auctionID).getHighestBid() >= amount) {
-				bidder.getChannel().send("bidding price to small".getBytes());
+				bidder.getChannel().send("!rejected Please use higher bid price".getBytes());
 			} else {
 				boolean addSuccess = potentialGroupBids.add(bid);
 				bidder.getChannel().send("create group bid successful; 2 others need to confirm: !confirm <auctionID> <amount> <ownerName>".getBytes());

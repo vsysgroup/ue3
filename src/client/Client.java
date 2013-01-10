@@ -579,7 +579,7 @@ public class Client {
 		String output = "";
 
 		for(int i = 1; i<splitString.length; i++){
-			if(splitString[i].equals("-|-")) {
+			if(splitString[i].equals("EndLinE")) {
 				output += "\n";
 			} else {
 				output += splitString[i];

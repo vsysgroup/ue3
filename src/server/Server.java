@@ -701,7 +701,7 @@ public class Server {
 				highestBidderName = highestBidder.getUsername();
 			}
 			list += ID + ". " + "'" + description + "'" + " " + owner + " " + endDate + " " + highestBid + " " + highestBidderName;
-			list += " -|- ";
+			list += " EndLinE ";
 		}
 		list = list.trim();
 		return list;

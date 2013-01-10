@@ -40,7 +40,7 @@ public class OutageHandler {
 		String output = "";
 				
 		for(int i = 1; i<splitString.length; i++){
-			if(splitString[i].equals("-|-")) {
+			if(splitString[i].equals("EndLinE")) {
 				output += "\n";
 			} else {
 				output += splitString[i];
@@ -74,7 +74,7 @@ public class OutageHandler {
 			boolean loggedIn = currentUser.isLoggedIn();
 			
 			clientList += username + " " + address + " " + port + " " + loggedIn;
-			clientList += " -|- ";
+			clientList += " EndLinE ";
 		}
 		return clientList;
 	}

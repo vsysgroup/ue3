@@ -228,7 +228,7 @@ public class Server {
 
 
 			} else {
-				// todo: stop everything - challenge response is wrong
+				// stop everything - challenge response is wrong
 				channel.send("identification failed".getBytes());
 				commSession.setCurrentUser(null);
 				return;
@@ -265,20 +265,7 @@ public class Server {
 				currentUser = findUser(username);
 
 				if (currentUser.isLoggedIn()) { // Error: User is already logged in
-					//add hashed MAC to the message
-					Key key = currentUser.getKey();
 					String returnMessage =	"login failed";	
-					try {
-						byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);	
-						byte[] encodedHMAC = Base64.encode(hMAC);
-						String append = new String(encodedHMAC);
-						currentUser.setLastMessage(returnMessage);
-						returnMessage += " " + append;
-					} catch (InvalidKeyException e) {
-						e.printStackTrace();
-					} catch (NoSuchAlgorithmException e) {
-						e.printStackTrace();
-					}
 
 					channel.send(returnMessage.getBytes()); // send login failed
 					return;
@@ -408,10 +395,8 @@ public class Server {
 
 			//			new UDPNotificationThread(returnAddress, port, "list" + " " + list).start();
 			channel.send(("list " + list).getBytes());
-
-			channel.send(("list " + list).getBytes());
-
 		}
+		
 		/**
 		 * creates a list and sends it to the user. The user has to be logged in to receive this version
 		 * of the message and will receive a hashed MAC at the end.

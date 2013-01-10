@@ -559,6 +559,7 @@ public class Client {
 			outageHandler.buildClientListClientSide(splitResponse);
 			if(clientListRequested) {
 				System.out.println(outageHandler.getPrintableClientList());
+				clientListRequested = false;
 			}
 		}
 		else if(splitResponse[0].equals("!confirmed")) {

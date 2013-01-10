@@ -26,8 +26,12 @@ public class GroupBidManager {
 		// do checks and create new groupBid - gibt es eine auction dazu, etc. 
 		if(getAuctionByID(auctionID) != null) {
 			GroupBid bid = new GroupBid(bidder, auctionID, amount);
-			boolean addSuccess = potentialGroupBids.add(bid);
-			bidder.getChannel().send("create group bid successful; 2 others need to confirm: !confirm <auctionID> <amount> <ownerName>".getBytes());
+			if(getAuctionByID(auctionID).getHighestBid() >= amount) {
+				bidder.getChannel().send("bidding price to small".getBytes());
+			} else {
+				boolean addSuccess = potentialGroupBids.add(bid);
+				bidder.getChannel().send("create group bid successful; 2 others need to confirm: !confirm <auctionID> <amount> <ownerName>".getBytes());
+			}
 		} else {
 			bidder.getChannel().send("create group bid not successful".getBytes());
 		}
@@ -44,21 +48,28 @@ public class GroupBidManager {
 			int i = b.getAuctionID();
 			double d = b.getAmount();
 			if((i == auctionID) && (d == amount)) {
-				success = true;
-				//groupBid exists
-				// add new confirmer to auction
-				b.addConfirmer(confirmer);
-				confirmer.getChannel().send("confirm sent; wait for second response".getBytes());
-				if(b.getConfirmers().size() == 2) {
-					b.getConfirmers().get(0).getChannel().send("!confirmed".getBytes());
-					b.getConfirmers().get(1).getChannel().send("!confirmed".getBytes());
-					//add auction bid
-					confirmGroupBid(auctionID, amount, b.getBidder(), b.getBidder().getChannel());
+
+				if(confirmer.getUsername().equals(b.getBidder().getUsername())) {
+					confirmer.getChannel().send("group bid creator mustn't confirm!".getBytes());
+				}
+				else {
+					success = true;
+
+					//groupBid exists
+					// add new confirmer to auction
+					b.addConfirmer(confirmer);
+					confirmer.getChannel().send("confirm sent; wait for second response".getBytes());
+					if(b.getConfirmers().size() == 2) {
+						b.getConfirmers().get(0).getChannel().send("!confirmed".getBytes());
+						b.getConfirmers().get(1).getChannel().send("!confirmed".getBytes());
+						//add auction bid
+						confirmGroupBid(auctionID, amount, b.getBidder(), b.getBidder().getChannel());
+					}
 				}
 			}
 		}
 		if(!success) {
-			String fail = "confirmation failed - no matching auctionId and/or amount";
+			String fail = "confirmation failed";
 			confirmer.getChannel().send(fail.getBytes());
 		}
 
@@ -70,7 +81,7 @@ public class GroupBidManager {
 
 	private void confirmGroupBid(int id, Double amount, User bidder, Channel channel) {
 		server.findAuctionByID(id).newBid(bidder, amount, channel, true);
-		
+
 	}
 
 	private GroupBid getGroupBidById(int auctionID) {

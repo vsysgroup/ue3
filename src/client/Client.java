@@ -191,7 +191,8 @@ public class Client {
 				}
 				else if(input[0].equals("!confirm") && input.length == 4) {
 					try {
-						confirm(Integer.parseInt(input[1]), Double.valueOf(input[2]), input[3]);
+						int auctionID = Integer.parseInt(input[1]);
+						confirm(auctionID, Double.valueOf(input[2]), input[3]);
 					} catch(NumberFormatException e) {
 						System.out.println("One of the parameters is wrong.");
 					}

@@ -452,8 +452,9 @@ public class Server {
 		if(input[0].equals("!confirm")) {
 			String username = input[1];
 			User user = findUser(username);
+			int id =  Integer.parseInt(input[2]);
 			// channel.send(("!confirm" + " " + username + " " + ID + " " + amount + " " + owner).getBytes());
-			groupBidManager.AddConfirmation(user, Integer.parseInt(input[2]), Double.parseDouble(input[3]));			
+			groupBidManager.AddConfirmation(user, id, Double.parseDouble(input[3]));			
 		}
 
 		/**
@@ -718,13 +719,13 @@ public class Server {
 	 */
 	public void bidSuccessful(User bidder, double amount, String description, int auctionID, Channel responseMsg) {
 
-		if(analyticsHandler != null) {
-			try {
-				analyticsHandler.processEvent(new BidEvent("BID_PLACED",bidder.getUsername(), (long) auctionID, amount));
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-		}
+//		if(analyticsHandler != null) {
+//			try {
+//				analyticsHandler.processEvent(new BidEvent("BID_PLACED",bidder.getUsername(), (long) auctionID, amount));
+//			} catch (RemoteException e) {
+//				e.printStackTrace();
+//			}
+//		}
 
 		Key key = bidder.getKey();
 		String returnMessage =	"bid" + " " + "successful" + " " + amount + " "  + description;	
@@ -742,41 +743,41 @@ public class Server {
 		responseMsg.send(returnMessage.getBytes());
 	}
 
-	/**
-	 * This notification is sent out whenever a user has been overbid on an auction.
-	 * @param bidder
-	 * @param description
-	 */
-	public void userOverbid(User bidder, double amount, String description, int auctionID, Channel responseMsg) {
-
-		if(analyticsHandler != null) {
-			try {
-				analyticsHandler.processEvent(new BidEvent("BID_OVERBID",bidder.getUsername(), (long) auctionID, amount));
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-		}
-
-		if(!bidder.isLoggedIn()) {
-			bidder.addMessage("!new-bid" + description);
-		}
-		else {
-			Key key = bidder.getKey();
-			String returnMessage =	"bid" + " " + "successful" + " " + amount + " "  + description;	
-			try {
-				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
-				byte[] encodedHMAC = Base64.encode(hMAC);  
-				String append = new String(encodedHMAC);
-				bidder.setLastMessage(returnMessage);
-				returnMessage += " " + append;
-			} catch (InvalidKeyException e) {
-				e.printStackTrace();
-			} catch (NoSuchAlgorithmException e) {
-				e.printStackTrace();
-			}	
-			responseMsg.send(returnMessage.getBytes());
-		}
-	}
+//	/**
+//	 * This notification is sent out whenever a user has been overbid on an auction.
+//	 * @param bidder
+//	 * @param description
+//	 */
+//	public void userOverbid(User bidder, double amount, String description, int auctionID, Channel responseMsg) {
+//
+////		if(analyticsHandler != null) {
+////			try {
+////				analyticsHandler.processEvent(new BidEvent("BID_OVERBID",bidder.getUsername(), (long) auctionID, amount));
+////			} catch (RemoteException e) {
+////				e.printStackTrace();
+////			}
+////		}
+//
+//		if(!bidder.isLoggedIn()) {
+//			bidder.addMessage("!new-bid" + description);
+//		}
+//		else {
+//			Key key = bidder.getKey();
+//			String returnMessage =	"bid" + " " + "successful" + " " + amount + " "  + description;	
+//			try {
+//				byte[] hMAC = integrityManager.createHashMAC(key, returnMessage);				
+//				byte[] encodedHMAC = Base64.encode(hMAC);  
+//				String append = new String(encodedHMAC);
+//				bidder.setLastMessage(returnMessage);
+//				returnMessage += " " + append;
+//			} catch (InvalidKeyException e) {
+//				e.printStackTrace();
+//			} catch (NoSuchAlgorithmException e) {
+//				e.printStackTrace();
+//			}	
+//			responseMsg.send(returnMessage.getBytes());
+//		}
+//	}
 
 	private static void lookupRMI() {
 		RegistryReader registryLocation = new RegistryReader();

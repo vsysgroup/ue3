@@ -50,7 +50,7 @@ public class OutageHandler {
 		output.trim();
 		
 		String[] tmpSplitString = output.split(" ");
-		for(int i = 0; i < tmpSplitString.length; i+=5) {
+		for(int i = 0; i < tmpSplitString.length-5; i+=5) {
 			String username = tmpSplitString[i];
 			String address = tmpSplitString[i+1];
 			int port = Integer.parseInt( tmpSplitString[i+2]);

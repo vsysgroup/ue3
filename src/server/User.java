@@ -76,7 +76,7 @@ public class User {
 	}
 	
 	public void setAddress(InetAddress inetAddress) {
-		this.address = inetAddress.toString();
+		this.address = inetAddress.getHostAddress();
 	}
 	
 	public String getAddress() {

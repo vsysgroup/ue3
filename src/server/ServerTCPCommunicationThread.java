@@ -1,6 +1,7 @@
 package server;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.security.Key;
 
@@ -24,11 +25,13 @@ public class ServerTCPCommunicationThread extends Thread {
 	private Channel channel = null;
 	private Key serverPrivateKey;
 	private User currentUser = null;
+	private InetAddress userAddress = null;
 
 	public ServerTCPCommunicationThread(Socket socket, Server server, Key serverPrivateKey) {
 		this.clientSocket = socket;
 		this.server = server;
 		this.serverPrivateKey = serverPrivateKey;
+		this.userAddress = socket.getInetAddress();
 	}
 
 	public void run() {
@@ -70,6 +73,10 @@ public class ServerTCPCommunicationThread extends Thread {
 
 	public void setCurrentUser(User currentUser) {
 		this.currentUser = currentUser;
+	}
+	
+	public InetAddress getUserAddress() {
+		return userAddress;
 	}
 
 }

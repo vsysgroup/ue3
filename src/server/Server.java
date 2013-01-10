@@ -248,6 +248,7 @@ public class Server {
 			if(!userKnown(username)) { // new user
 				currentUser = new User(username);
 				currentUser.setPort(tcpPort);	
+				currentUser.setAddress(commSession.getUserAddress());
 				try {
 					currentUser.setKey(integrityManager.getSecretKey(username));
 				} catch (IOException e1) {

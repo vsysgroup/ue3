@@ -1,7 +1,6 @@
 package outageHandling;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -21,10 +20,8 @@ import java.util.Iterator;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.Base64;
 
-import communication.Channel;
 
 import server.Server;
-import server.ServerTCPListenerThread;
 import server.User;
 import client.Client;
 
@@ -201,6 +198,9 @@ public class OutageHandler {
 	}
 
 	public void receiveMessage(String message, Socket returnSocket) {
+		
+		System.out.println("received message: " + message);
+		
 		String[] input = message.split(" ");
 		
 		//!getTimestamp <auctionID> <price>
@@ -209,18 +209,16 @@ public class OutageHandler {
 			double price = Double.parseDouble(input[2]);
 			
 			String returnMessage =	"!timestamp" + " " + auctionID + " " + price + " " + getTimeStamp();	
-			returnMessage = signMessage(returnMessage);
+//			returnMessage = signMessage(returnMessage);
 			
 			try {
 				PrintWriter tmpOut = new PrintWriter(returnSocket.getOutputStream(), true);
+				tmpOut.println(returnMessage);
+				tmpOut.flush();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-		if(input[0].equals("!timestamp")) {
-			//TODO react to !timestamp response, extract signatues and save them
-		}
-		
 	}
 	
 	public void chooseClients() {
@@ -228,7 +226,7 @@ public class OutageHandler {
 		int chosen = 0;
 		while(iter.hasNext() && chosen < 2) {
 			OutageUser currentUser = iter.next();
-			if(currentUser.isLoggedIn()) {
+			if(currentUser.isLoggedIn() && !currentUser.getUsername().equals(client.getUserName())) {
 				chosenClients.add(currentUser);
 				chosen++;
 			}
@@ -236,6 +234,8 @@ public class OutageHandler {
 	}
 	
 	public void sendTimestampRequest(String message) {
+		
+		
 		try {
 			socket1 = new Socket(chosenClients.get(0).getAddress(), chosenClients.get(0).getPort());
 			in1 = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
@@ -248,8 +248,8 @@ public class OutageHandler {
 		}
 		try {
 			socket2 = new Socket(chosenClients.get(1).getAddress(), chosenClients.get(1).getPort());
-			in1 = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
-			out1 = new PrintWriter(socket1.getOutputStream(), true);
+			in2 = new BufferedReader(new InputStreamReader(socket2.getInputStream()));
+			out2 = new PrintWriter(socket2.getOutputStream(), true);
 		} catch (UnknownHostException e) {
 			System.out.println("Connection to Client 2 could not be established - Unknown Host");
 		} catch (IOException e) {
@@ -257,7 +257,28 @@ public class OutageHandler {
 		}
 		
 		out1.println(message);
+		out1.flush();
 		out2.println(message);
+		out2.flush();
+		
+		try {
+			String response1 = in1.readLine();
+			String response2 = in2.readLine();
+			
+			String[] input1 = response1.split(" ");
+			String[] input2 = response2.split(" ");
+			if(input1[0].equals("!timestamp")) {
+				//TODO react to !timestamp response, extract signatues and save them
+				System.out.println(message);
+			}
+			if(input2[0].equals("!timestamp")) {
+				//TODO react to !timestamp response, extract signatues and save them
+				System.out.println(message);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 	}
 	
